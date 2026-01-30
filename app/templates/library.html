@@ -1,0 +1,82 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>Library</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong>Webcomic Reader</strong>
+          <span>Library • Series</span>
+        </div>
+        <div class="row">
+          {% if current_user and current_user.is_admin %}
+            <a class="btn ghost" href="/admin">Admin</a>
+          {% endif %}
+          <a class="btn ghost" href="/settings">Settings</a>
+          <form method="post" action="/rescan">
+            <button class="btn" type="submit">Rescan</button>
+          </form>
+          <form method="post" action="/logout">
+            <button class="btn" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="alert success">{{ success }}</div>
+      {% endif %}
+
+      {% if comics|length == 0 %}
+        <div class="card">
+          <h3>No comics found</h3>
+          <div class="muted">Create a folder inside <span class="code">./comics</span> (or set <span class="code">COMICS_DIR</span>).</div>
+        </div>
+      {% else %}
+        <div class="grid">
+          {% for row in comics %}
+            {% set c = row.comic %}
+            {% set lr = row.last_read %}
+            <div class="card">
+              {% if current_user and current_user.is_admin %}
+                <a class="kebab" href="/admin/series/{{ c.slug }}" title="Edit series">⋯</a>
+              {% endif %}
+              {% if row.poster_url %}
+                <div class="poster">
+                  <img src="{{ row.poster_url }}" alt="{{ c.title }} poster" />
+                </div>
+              {% endif %}
+              <h3><a href="/comic/{{ c.slug }}">{{ row.display_title }}</a></h3>
+
+              <div class="muted">{{ row.year_count }} years • {{ row.total_images }} pages</div>
+
+              {% if lr %}
+                <div class="muted">Last read: <strong>{{ lr.year_title }}</strong>, page {{ lr.page_index + 1 }}</div>
+                {% if row.progress_pct is not none %}
+                  <div class="progress">
+                    <div class="progress-bar" style="width: {{ row.progress_pct }}%;"></div>
+                  </div>
+                {% endif %}
+              {% else %}
+                <div class="muted">Not started yet.</div>
+              {% endif %}
+
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </body>
+</html>

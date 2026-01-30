@@ -1,0 +1,70 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ comic.title }} — {{ year.title }} — Browse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong><a href="/comic/{{ comic.slug }}" style="color:inherit; text-decoration:none;">{{ comic.title }}</a></strong>
+          <span>{{ year.title }} • Browse ({{ page_count }} pages)</span>
+        </div>
+        <div class="row">
+          <a class="btn ghost" href="/comic/{{ comic.slug }}">&larr; Years</a>
+          <a class="btn" href="/read/{{ comic.slug }}/{{ year.slug }}">Read</a>
+          {% if current_user and current_user.is_admin %}
+            <a class="btn ghost" href="/admin">Admin</a>
+          {% endif %}
+          <a class="btn ghost" href="/settings">Settings</a>
+          <form method="post" action="/logout">
+            <button class="btn" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="sticky-bar">
+        <form class="row" onsubmit="return jumpToPage(event);">
+          <span class="muted">Jump to page</span>
+          <input class="input" type="number" min="1" max="{{ page_count }}" name="page" placeholder="1" />
+          <button class="btn" type="submit">Go</button>
+        </form>
+      </div>
+      {% if items|length == 0 %}
+        <div class="card">
+          <h3>No images found</h3>
+          <div class="muted">This year has no images.</div>
+        </div>
+      {% else %}
+        <div class="thumb-grid">
+          {% for item in items %}
+            <a class="thumb" href="{{ item.read_url }}" title="Page {{ item.page }} — {{ item.filename }}">
+              <img src="{{ item.thumb_url }}" alt="{{ item.filename }}" loading="lazy" />
+              <div class="thumb-label">{{ item.page }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <script>
+      function jumpToPage(e) {
+        e.preventDefault();
+        const input = e.target.querySelector('input[name="page"]');
+        if (!input || !input.value) return false;
+        const page = parseInt(input.value, 10);
+        if (!page || page < 1) return false;
+        window.location.href = "/read/{{ comic.slug }}/{{ year.slug }}/" + page;
+        return false;
+      }
+    </script>
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </body>
+</html>

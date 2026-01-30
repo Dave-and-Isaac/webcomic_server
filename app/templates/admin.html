@@ -1,0 +1,133 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong><a href="/" style="color:inherit; text-decoration:none;">Webcomic Reader</a></strong>
+          <span>Admin Settings</span>
+        </div>
+        <div class="row">
+          <a class="btn ghost" href="/">Library</a>
+          <a class="btn ghost" href="/settings">Settings</a>
+          <form method="post" action="/logout">
+            <button class="btn" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="container admin-layout">
+      <aside class="sidebar">
+        <div class="sidebar-title">Admin</div>
+        <a class="sidebar-link {% if section == 'overview' %}active{% endif %}" href="/admin?section=overview">Overview</a>
+        <a class="sidebar-link {% if section == 'users' %}active{% endif %}" href="/admin?section=users">Users</a>
+      </aside>
+
+      <main class="admin-content">
+        {% if error %}
+          <div class="alert error">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+          <div class="alert success">{{ success }}</div>
+        {% endif %}
+
+        {% if section == 'users' %}
+          <div class="grid">
+            <div class="card">
+              <h3>Create User</h3>
+              <form method="post" action="/admin/users" class="stack">
+                <input class="input" type="text" name="username" placeholder="Username" required />
+                <input class="input" type="password" name="password" placeholder="Temporary password" required />
+                <label class="row" style="gap:8px;">
+                  <input type="checkbox" name="is_admin" value="1" />
+                  <span class="muted">Admin user</span>
+                </label>
+                <button class="btn" type="submit">Create</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <h3>Users</h3>
+            {% if users|length == 0 %}
+              <div class="muted">No users found.</div>
+            {% else %}
+              <div class="list">
+                {% for u in users %}
+                  <div class="list-row">
+                    <div>
+                      <strong>{{ u.username }}</strong>
+                      {% if u.is_admin %}<span class="pill">admin</span>{% endif %}
+                      {% if u.must_change_password %}<span class="pill warn">change password</span>{% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="muted">Series</div>
+              <div class="stat-value">{{ stats.series }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="muted">Years</div>
+              <div class="stat-value">{{ stats.years }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="muted">Images</div>
+              <div class="stat-value">{{ stats.images }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="muted">Users</div>
+              <div class="stat-value">{{ stats.users }}</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <h3>Comics Location</h3>
+            <form method="post" action="/settings/comics-dir" class="row">
+              <input class="input" type="text" name="comics_dir" value="{{ comics_dir }}" placeholder="./comics" />
+              <button class="btn" type="submit">Save</button>
+            </form>
+            <div class="muted" style="margin-top:8px;">
+              Current: <span class="code">{{ comics_dir }}</span> (source: {{ comics_dir_source }})
+            </div>
+            {% if env_comics_dir %}
+              <div class="muted" style="margin-top:6px;">
+                Env {{ "COMICS_DIR" }}: <span class="code">{{ env_comics_dir }}</span>
+              </div>
+              {% if comics_dir_source == "saved" %}
+                <form method="post" action="/settings/comics-dir/reset" class="row" style="margin-top:8px;">
+                  <button class="btn ghost" type="submit">Use env value</button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <h3>Scan Status</h3>
+            <div class="muted">Last started: <span class="code">{{ scan.last_started or '—' }}</span></div>
+            <div class="muted">Last completed: <span class="code">{{ scan.last_completed or '—' }}</span></div>
+            <div class="muted">Duration: <span class="code">{{ scan.duration_ms or '—' }} ms</span></div>
+            <form method="post" action="/rescan" class="row" style="margin-top:10px;">
+              <button class="btn" type="submit">Rescan Now</button>
+            </form>
+          </div>
+        {% endif %}
+      </main>
+    </div>
+
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </body>
+</html>

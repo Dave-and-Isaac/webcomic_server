@@ -1,0 +1,158 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ comic.title }} — {{ year.title }} — {{ page }}{% if page_filename %} — {{ page_filename }}{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong><a href="/comic/{{ comic.slug }}" style="color:inherit; text-decoration:none;">{{ comic.title }}</a></strong>
+          <span>{{ year.title }}{% if page_count > 0 %} • Page {{ page }} / {{ page_count }}{% endif %}</span>
+        </div>
+        <div class="row">
+          <a class="btn ghost" href="/comic/{{ comic.slug }}">&larr; Years</a>
+          {% if prev_url %}
+            <a class="btn" href="{{ prev_url }}" rel="prev">Prev</a>
+          {% else %}
+            <span class="btn disabled">Prev</span>
+          {% endif %}
+          {% if next_url %}
+            <a class="btn" href="{{ next_url }}" rel="next">Next</a>
+          {% else %}
+            <span class="btn disabled">Next</span>
+          {% endif %}
+          {% if current_user and current_user.is_admin %}
+            <a class="btn ghost" href="/admin">Admin</a>
+          {% endif %}
+          <a class="btn ghost" href="/settings">Settings</a>
+          <form method="post" action="/logout">
+            <button class="btn" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="reader">
+      <div class="reader-head">
+        <div class="reader-title">
+          <strong>{{ year.title }}</strong>
+          <div class="muted">
+            {% if page_filename %}File: <span class="code">{{ page_filename }}</span>{% endif %}
+            • Keyboard: <span class="kbd">←</span> <span class="kbd">→</span> <span class="kbd">Space</span>
+            • Tip: click left/right sides to navigate
+          </div>
+        </div>
+        <div class="reader-controls">
+          <button class="btn ghost" type="button" onclick="zoomBy(-0.1)">Zoom −</button>
+          <button class="btn ghost" type="button" onclick="zoomBy(0.1)">Zoom +</button>
+          <button class="btn ghost" type="button" onclick="resetZoom()">Reset</button>
+          <span id="fitLabel" class="muted"></span>
+        </div>
+      </div>
+
+      <div class="reader-image-wrap">
+        {% if image_url %}
+          <div class="image-nav">
+            {% if prev_url %}
+              <a class="nav-zone left" href="{{ prev_url }}" rel="prev" aria-label="Previous page"></a>
+            {% endif %}
+            {% if next_url %}
+              <a class="nav-zone right" href="{{ next_url }}" rel="next" aria-label="Next page"></a>
+            {% endif %}
+            <img id="pageImage" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
+          </div>
+        {% else %}
+          <div style="padding:24px;" class="muted">No images found in this year.</div>
+        {% endif %}
+      </div>
+
+      <div class="reader-foot">
+        {% if prev_url %}
+          <a class="btn" href="{{ prev_url }}" rel="prev">Prev</a>
+        {% else %}
+          <span class="btn disabled">Prev</span>
+        {% endif %}
+        {% if next_url %}
+          <a class="btn" href="{{ next_url }}" rel="next">Next</a>
+        {% else %}
+          <span class="btn disabled">Next</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <script>
+      const keyboardEnabled = {{ 'true' if keyboard_enabled else 'false' }};
+      const zoomKey = "readerZoom";
+
+      function updateFitLabel(mode) {
+        const label = document.getElementById('fitLabel');
+        if (!label) return;
+        const zoomPct = Math.round(getZoom() * 100);
+        label.textContent = 'Zoom ' + zoomPct + '%';
+      }
+
+      updateFitLabel('zoom');
+
+      function getZoom() {
+        const z = parseFloat(localStorage.getItem(zoomKey) || "1");
+        return isNaN(z) ? 1 : z;
+      }
+
+      function setZoom(z) {
+        const clamped = Math.max(0.5, Math.min(3, z));
+        localStorage.setItem(zoomKey, clamped.toString());
+        updateFitLabel('zoom');
+        applySizing();
+      }
+
+      function zoomBy(delta) {
+        setZoom(getZoom() + delta);
+      }
+
+      function resetZoom() {
+        setZoom(1);
+      }
+
+      function applySizing() {
+        const img = document.getElementById('pageImage');
+        if (!img) return;
+        if (!img.complete || !img.naturalWidth) return;
+        const zoom = getZoom();
+        img.style.width = '';
+        img.style.height = '';
+
+        img.style.width = (img.naturalWidth * zoom) + 'px';
+        img.style.height = 'auto';
+      }
+
+      setZoom(getZoom());
+      window.addEventListener('resize', applySizing);
+      const imgEl = document.getElementById('pageImage');
+      if (imgEl) {
+        imgEl.addEventListener('load', applySizing);
+        applySizing();
+      }
+
+      // Keyboard nav: left/right + space for next
+      document.addEventListener("keydown", (e) => {
+        if (!keyboardEnabled) return;
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+        if (tag === "input" || tag === "textarea") return;
+
+        const prevUrl = "{{ prev_url or '' }}";
+        const nextUrl = "{{ next_url or '' }}";
+
+        if (e.key === "ArrowLeft" && prevUrl) window.location.href = prevUrl;
+        if (e.key === "ArrowRight" && nextUrl) window.location.href = nextUrl;
+        if (e.key === " " && nextUrl) { e.preventDefault(); window.location.href = nextUrl; }
+      });
+    </script>
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </body>
+</html>

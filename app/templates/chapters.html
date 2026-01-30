@@ -1,0 +1,100 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ comic.title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong><a href="/" style="color:inherit; text-decoration:none;">Webcomic Reader</a></strong>
+          <span>Series • Years</span>
+        </div>
+        <div class="row">
+          <a class="btn ghost" href="/">&larr; Library</a>
+          {% if current_user and current_user.is_admin %}
+            <a class="btn ghost" href="/admin">Admin</a>
+          {% endif %}
+          <a class="btn ghost" href="/settings">Settings</a>
+          <a class="btn" href="/resume/{{ comic.slug }}">Resume</a>
+          <form method="post" action="/logout">
+            <button class="btn" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="series-hero">
+        {% if poster_url %}
+          <div class="series-poster">
+            <img src="{{ poster_url }}" alt="{{ comic.title }} poster" />
+          </div>
+        {% endif %}
+        <div class="series-meta">
+          {% if logo_url %}
+            <img class="series-logo" src="{{ logo_url }}" alt="{{ comic.title }} logo" />
+          {% endif %}
+          <h2>{{ meta.title or comic.title }}</h2>
+          {% if meta.year_range %}
+            <div class="muted">{{ meta.year_range }}</div>
+          {% endif %}
+          {% if meta.summary %}
+            <div class="series-summary">{{ meta.summary }}</div>
+          {% endif %}
+          {% if meta.website %}
+            <a class="btn ghost" href="{{ meta.website }}" target="_blank" rel="noopener noreferrer">Official website</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row" style="justify-content: space-between; align-items: center; margin-top: 10px;">
+        <div class="muted">Select a year.</div>
+        <a class="btn ghost" href="/comic/{{ comic.slug }}?order={{ toggle_order }}">
+          Order: {{ "Oldest → Newest" if order == "asc" else "Newest → Oldest" }}
+        </a>
+      </div>
+      <hr class="sep" />
+
+      {% if years|length == 0 %}
+        <div class="card">
+          <h3>No years found</h3>
+          <div class="muted">Expected folders like <span class="code">Series Name/2010/*.png</span>.</div>
+        </div>
+      {% else %}
+        <div class="grid">
+          {% for row in years %}
+            {% set year = row.year %}
+            {% set read_url = '/read/' ~ comic.slug ~ '/' ~ year.slug %}
+            {% set browse_url = '/browse/' ~ comic.slug ~ '/' ~ year.slug %}
+            <div class="card">
+              <h3>
+                <a href="{{ browse_url if default_view == 'browse' else read_url }}">{{ year.title }}</a>
+              </h3>
+            {% if row.progress_page %}
+              <div class="muted">Resume at page {{ row.progress_page }}</div>
+            {% else %}
+              <div class="muted">Not started.</div>
+            {% endif %}
+            <div class="actions">
+              <a class="btn" href="{{ read_url }}">Read</a>
+              <a class="btn ghost" href="{{ browse_url }}">Browse</a>
+              {% if row.progress_page %}
+                <form method="post" action="/restart/{{ comic.slug }}/{{ year.slug }}">
+                  <button class="btn ghost" type="submit">Restart</button>
+                </form>
+              {% endif %}
+            </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </body>
+</html>

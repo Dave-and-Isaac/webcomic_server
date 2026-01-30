@@ -1,0 +1,71 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong><a href="/" style="color:inherit; text-decoration:none;">Webcomic Reader</a></strong>
+          <span>Settings</span>
+        </div>
+        <div class="row">
+          {% if current_user and current_user.is_admin %}
+            <a class="btn ghost" href="/admin">Admin</a>
+          {% endif %}
+          <a class="btn ghost" href="/">Library</a>
+          <form method="post" action="/logout">
+            <button class="btn" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="alert success">{{ success }}</div>
+      {% endif %}
+
+      <div class="card">
+        <h3>Appearance</h3>
+        <form method="post" action="/settings/theme" class="row">
+          <select class="input" name="theme">
+            <option value="system" {% if theme == "system" %}selected{% endif %}>System default</option>
+            <option value="dark" {% if theme == "dark" %}selected{% endif %}>Dark</option>
+            <option value="light" {% if theme == "light" %}selected{% endif %}>Light</option>
+          </select>
+          <button class="btn" type="submit">Save</button>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3>Reader</h3>
+        <form method="post" action="/settings/reader" class="stack">
+          <label class="row" style="gap:8px;">
+            <input type="checkbox" name="keyboard_enabled" value="1" {% if keyboard_enabled %}checked{% endif %} />
+            <span class="muted">Enable keyboard navigation</span>
+          </label>
+          <label class="stack">
+            <span class="muted">Default year view</span>
+            <select class="input" name="default_view">
+              <option value="read" {% if default_view == "read" %}selected{% endif %}>Read</option>
+              <option value="browse" {% if default_view == "browse" %}selected{% endif %}>Browse</option>
+            </select>
+          </label>
+          <button class="btn" type="submit">Save</button>
+        </form>
+      </div>
+    </div>
+
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </body>
+</html>
