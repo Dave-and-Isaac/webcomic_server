@@ -44,12 +44,16 @@ jobs:
             echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Normalize owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
       - name: Build tag list
         id: meta
         run: |
-          TAGS="ghcr.io/${{ github.repository_owner }}/webcomic-reader:${{ steps.version.outputs.version }}"
+          TAGS="ghcr.io/${{ steps.owner.outputs.owner }}/webcomic-reader:${{ steps.version.outputs.version }}"
           if [ "${{ inputs.publish_latest }}" = "true" ]; then
-            TAGS="${TAGS}\nghcr.io/${{ github.repository_owner }}/webcomic-reader:latest"
+            TAGS="${TAGS}\nghcr.io/${{ steps.owner.outputs.owner }}/webcomic-reader:latest"
           fi
           echo "tags<<EOF" >> "$GITHUB_OUTPUT"
           echo -e "$TAGS" >> "$GITHUB_OUTPUT"
