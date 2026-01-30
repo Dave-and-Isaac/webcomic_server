@@ -1,6 +1,6 @@
 services:
   webcomic_reader:
-    image: webcomic-reader:0.1.0
+    image: ghcr.io/${GHCR_OWNER}/webcomic-reader:latest
     build: .
     ports:
       - "8000:8000"
