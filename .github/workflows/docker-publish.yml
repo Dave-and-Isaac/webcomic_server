@@ -69,3 +69,20 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
             org.opencontainers.image.version=${{ steps.version.outputs.version }}
+
+      - name: Publish summary
+        run: |
+          {
+            echo "## Docker image published"
+            echo ""
+            echo "**Image:** \`ghcr.io/${{ steps.owner.outputs.owner }}/webcomic-reader\`"
+            echo ""
+            echo "**Version:** \`${{ steps.version.outputs.version }}\`"
+            echo ""
+            echo "**Platforms:** \`linux/amd64, linux/arm64\`"
+            echo ""
+            echo "**Tags:**"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
