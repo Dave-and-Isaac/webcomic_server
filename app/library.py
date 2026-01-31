@@ -61,21 +61,24 @@ def list_images_in_dir(dir_path: Path) -> list[Path]:
 
 def list_images_in_archive(archive_path: Path) -> list[str]:
     suffix = archive_path.suffix.lower()
-    if suffix in {".cbz", ".zip"}:
-        with zipfile.ZipFile(archive_path) as zf:
-            names = [
-                info.filename
-                for info in zf.infolist()
-                if not info.is_dir() and is_image_name(info.filename)
-            ]
-    elif suffix == ".cbr" and rarfile is not None:
-        with rarfile.RarFile(archive_path) as rf:
-            names = [
-                info.filename
-                for info in rf.infolist()
-                if not info.is_dir() and is_image_name(info.filename)
-            ]
-    else:
+    try:
+        if suffix in {".cbz", ".zip"}:
+            with zipfile.ZipFile(archive_path) as zf:
+                names = [
+                    info.filename
+                    for info in zf.infolist()
+                    if not info.is_dir() and is_image_name(info.filename)
+                ]
+        elif suffix == ".cbr" and rarfile is not None:
+            with rarfile.RarFile(archive_path) as rf:
+                names = [
+                    info.filename
+                    for info in rf.infolist()
+                    if not info.is_dir() and is_image_name(info.filename)
+                ]
+        else:
+            names = []
+    except Exception:
         names = []
     return sorted(names, key=lambda n: n.lower())
 
