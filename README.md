@@ -83,6 +83,7 @@ GHCR_OWNER=your-github-username
 Then start:
 
 ```
+docker compose pull
 docker compose up -d
 ```
 

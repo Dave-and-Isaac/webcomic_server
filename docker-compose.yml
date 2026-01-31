@@ -1,7 +1,6 @@
 services:
   webcomic_reader:
-    image: ghcr.io/${GHCR_OWNER}/webcomic-reader:latest
-    build: .
+    image: ghcr.io/dave-and-isaac/webcomic-reader:latest
     ports:
       - "8000:8000"
     environment:
