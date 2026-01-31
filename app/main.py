@@ -53,7 +53,11 @@ TEMPLATES = Jinja2Templates(directory=str(APP_ROOT / "templates"))
 COMICS_ENV_VAR = "COMICS_DIR"
 COMICS_SETTING_KEY = "comics_dir"
 DEFAULT_COMICS_DIR = "comics"
-APP_VERSION = os.environ.get("APP_VERSION", "dev")
+_version_path = APP_ROOT.parent / "VERSION"
+if _version_path.exists():
+    APP_VERSION = _version_path.read_text(encoding="utf-8").strip() or "dev"
+else:
+    APP_VERSION = "dev"
 
 app = FastAPI(title="Webcomic Reader (MVP)")
 
