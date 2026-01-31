@@ -6,7 +6,6 @@ services:
       - "8000:8000"
     environment:
       - COMICS_DIR=/comics
-      - APP_VERSION=0.1.0
     volumes:
       - ./comics:/comics:ro
       - ./config:/app/config

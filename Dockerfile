@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY app /app/app
 COPY VERSION /app/VERSION
 COPY config /app/config
-# COPY data /app/data
 
 # Ensure required directories exist even if empty on host
 RUN mkdir -p /app/config/logos /app/config/posters /app/data
