@@ -19,6 +19,7 @@ from .db import (
     delete_setting,
     delete_progress_for_year,
     delete_progress_for_comic,
+    delete_all_progress,
 )
 from .auth import (
     ensure_admin_user,
@@ -32,8 +33,10 @@ from .auth import (
     verify_password,
     update_theme,
     update_reader_prefs,
+    update_username,
+    update_avatar,
 )
-from .config import ensure_config, load_series_config, save_series_config, POSTERS_DIR, LOGOS_DIR
+from .config import ensure_config, load_series_config, save_series_config, POSTERS_DIR, LOGOS_DIR, AVATARS_DIR
 
 from .library import (
     scan_comics,
@@ -63,7 +66,7 @@ if _version_path.exists():
 else:
     APP_VERSION = "dev"
 
-app = FastAPI(title="Webcomic Reader (MVP)")
+app = FastAPI(title="StripStash")
 
 app.mount("/static", StaticFiles(directory=str(APP_ROOT / "static")), name="static")
 
@@ -103,6 +106,11 @@ def _render(request: Request, template_name: str, context: dict):
     context["theme"] = (user.theme if user and user.theme else "system")
     context["keyboard_enabled"] = bool(user and user.keyboard_enabled)
     context["default_view"] = (user.default_view if user and user.default_view else "read")
+    context["active_path"] = request.url.path
+    if user and user.avatar:
+        context["avatar_url"] = f"/config/avatars/{user.avatar}"
+    else:
+        context["avatar_url"] = None
     context["app_version"] = APP_VERSION
     return TEMPLATES.TemplateResponse(template_name, context)
 
@@ -133,7 +141,7 @@ async def _auth_middleware(request: Request, call_next):
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str | None = None):
     if _get_current_user(request):
-        return RedirectResponse(url="/", status_code=303)
+        return RedirectResponse(url="/home", status_code=303)
     return _render(
         request,
         "login.html",
@@ -147,7 +155,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     if not user or not verify_password(password, user.password_hash):
         return RedirectResponse(url="/login?error=Invalid+credentials", status_code=303)
     token = create_session(user.id)
-    response = RedirectResponse(url="/", status_code=303)
+    response = RedirectResponse(url="/home", status_code=303)
     response.set_cookie("session", token, httponly=True, samesite="lax")
     return response
 
@@ -198,8 +206,96 @@ def update_reader_settings(
     return RedirectResponse(url="/settings?success=Reader+settings+updated", status_code=303)
 
 
+@app.post("/settings/reset-progress")
+def reset_all_progress(request: Request):
+    user = request.state.user
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    delete_all_progress()
+    return RedirectResponse(url="/settings?success=Progress+reset", status_code=303)
 
-@app.get("/", response_class=HTMLResponse)
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile_page(request: Request, error: str | None = None, success: str | None = None):
+    return _render(
+        request,
+        "profile.html",
+        {"request": request, "error": error, "success": success},
+    )
+
+
+@app.post("/profile/username")
+def profile_update_username(request: Request, username: str = Form(...)):
+    user = request.state.user
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    cleaned = username.strip()
+    if not cleaned:
+        return RedirectResponse(url="/profile?error=Username+required", status_code=303)
+    existing = get_user_by_username(cleaned)
+    if existing and existing.id != user.id:
+        return RedirectResponse(url="/profile?error=Username+already+taken", status_code=303)
+    update_username(user.id, cleaned)
+    return RedirectResponse(url="/profile?success=Username+updated", status_code=303)
+
+
+@app.post("/profile/password")
+def profile_update_password(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+):
+    user = request.state.user
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    if not verify_password(current_password, user.password_hash):
+        return RedirectResponse(url="/profile?error=Current+password+incorrect", status_code=303)
+    if not new_password or new_password != confirm_password:
+        return RedirectResponse(url="/profile?error=Passwords+do+not+match", status_code=303)
+    update_password(user.id, new_password)
+    return RedirectResponse(url="/profile?success=Password+updated", status_code=303)
+
+
+@app.post("/profile/avatar")
+def profile_update_avatar(request: Request, avatar: UploadFile = File(...)):
+    user = request.state.user
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    if not avatar or not avatar.filename:
+        return RedirectResponse(url="/profile?error=No+file+selected", status_code=303)
+    ext = Path(avatar.filename).suffix.lower()
+    if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
+        return RedirectResponse(url="/profile?error=Unsupported+file+type", status_code=303)
+    filename = f"user-{user.id}-{int(time.time())}{ext}"
+    file_path = (AVATARS_DIR / filename).resolve()
+    if AVATARS_DIR not in file_path.parents:
+        return RedirectResponse(url="/profile?error=Invalid+path", status_code=303)
+    data = avatar.file.read()
+    file_path.write_bytes(data)
+    if user.avatar:
+        old_path = (AVATARS_DIR / user.avatar).resolve()
+        if AVATARS_DIR in old_path.parents and old_path.exists():
+            old_path.unlink()
+    update_avatar(user.id, filename)
+    return RedirectResponse(url="/profile?success=Avatar+updated", status_code=303)
+
+
+@app.post("/profile/avatar/remove")
+def profile_remove_avatar(request: Request):
+    user = request.state.user
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    if user.avatar:
+        old_path = (AVATARS_DIR / user.avatar).resolve()
+        if AVATARS_DIR in old_path.parents and old_path.exists():
+            old_path.unlink()
+    update_avatar(user.id, None)
+    return RedirectResponse(url="/profile?success=Avatar+removed", status_code=303)
+
+
+
+@app.get("/series", response_class=HTMLResponse)
 def library(request: Request, error: str | None = None, success: str | None = None):
     comics = get_comics()
     last_reads = get_last_read_all_comics()
@@ -249,6 +345,61 @@ def library(request: Request, error: str | None = None, success: str | None = No
     )
 
 
+@app.get("/", response_class=HTMLResponse)
+@app.get("/home", response_class=HTMLResponse)
+def home(request: Request):
+    comics = get_comics()
+    last_reads = get_last_read_all_comics()
+    series_cfg = load_series_config()
+
+    continue_items = []
+    for c in comics:
+        lr = last_reads.get(c.id)
+        if not lr:
+            continue
+        year = get_year_by_slugs(c.id, lr["year_slug"])
+        if not year:
+            continue
+        meta = series_cfg.get(c.slug, {}) if isinstance(series_cfg, dict) else {}
+        display_title = meta.get("title") or c.title
+        poster = meta.get("poster")
+        poster_url = f"/config/posters/{poster}" if poster else None
+        images = get_year_images(year.path)
+        page_index = lr["page_index"]
+        page_num = page_index + 1
+        preview_url = None
+        year_path = Path(year.path)
+        if is_pdf_file(year_path):
+            preview_url = f"/pdf-page/{c.slug}/{year.slug}/{page_num}?dpi=140"
+        else:
+            if images:
+                filename = images[min(page_index, len(images) - 1)]
+                preview_url = f"/asset/{c.slug}/{year.slug}/{filename}"
+        continue_items.append(
+            {
+                "comic": c,
+                "display_title": display_title,
+                "poster_url": poster_url,
+                "year_title": year.title,
+                "page_num": page_num,
+                "preview_url": preview_url,
+                "resume_url": f"/read/{c.slug}/{year.slug}/{page_num}",
+                "updated_at": lr.get("updated_at"),
+            }
+        )
+
+    continue_items.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
+
+    return _render(
+        request,
+        "home.html",
+        {
+            "request": request,
+            "continue_items": continue_items[:8],
+        },
+    )
+
+
 @app.post("/settings/comics-dir")
 def update_comics_dir(request: Request, comics_dir: str = Form(...)):
     user = request.state.user
@@ -279,7 +430,7 @@ def reset_comics_dir(request: Request):
 def rescan():
     comics_dir, _source = _get_active_comics_dir()
     _scan_and_record(comics_dir)
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url="/series", status_code=303)
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -828,6 +979,16 @@ def pdf_page_asset(comic_slug: str, year_slug: str, page: int, dpi: int = 250):
 def logo_asset(filename: str):
     file_path = (LOGOS_DIR / filename).resolve()
     if LOGOS_DIR not in file_path.parents:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(file_path))
+
+
+@app.get("/config/avatars/{filename}")
+def avatar_asset(filename: str):
+    file_path = (AVATARS_DIR / filename).resolve()
+    if AVATARS_DIR not in file_path.parents:
         raise HTTPException(status_code=400, detail="Invalid path")
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")

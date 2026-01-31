@@ -1,0 +1,74 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    {% include "partials/sidebar.html" %}
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong>Profile</strong>
+          <span>Account</span>
+        </div>
+        <a class="btn ghost" href="/home">&larr; Home</a>
+      </div>
+    </div>
+
+    <div class="container">
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="alert success">{{ success }}</div>
+      {% endif %}
+
+      <div class="card">
+        <h3>Profile Picture</h3>
+        <div class="row" style="align-items:center; gap:16px;">
+          {% if avatar_url %}
+            <img src="{{ avatar_url }}" alt="Avatar" class="avatar" />
+          {% else %}
+            <div class="avatar placeholder">{{ current_user.username[0]|upper }}</div>
+          {% endif %}
+          <form method="post" action="/profile/avatar" enctype="multipart/form-data" class="row">
+            <input class="input" type="file" name="avatar" accept="image/png,image/jpeg,image/webp" required />
+            <button class="btn" type="submit">Upload</button>
+          </form>
+          {% if avatar_url %}
+            <form method="post" action="/profile/avatar/remove">
+              <button class="btn ghost" type="submit">Remove</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3>Username</h3>
+        <form method="post" action="/profile/username" class="row">
+          <input class="input" type="text" name="username" value="{{ current_user.username }}" required />
+          <button class="btn" type="submit">Update</button>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3>Password</h3>
+        <form method="post" action="/profile/password" class="stack">
+          <input class="input" type="password" name="current_password" placeholder="Current password" required />
+          <input class="input" type="password" name="new_password" placeholder="New password" required />
+          <input class="input" type="password" name="confirm_password" placeholder="Confirm new password" required />
+          <button class="btn" type="submit">Update password</button>
+        </form>
+      </div>
+    </div>
+
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
+  </body>
+</html>

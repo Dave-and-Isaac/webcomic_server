@@ -1,0 +1,57 @@
+<!doctype html>
+<html data-theme="{{ theme }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <link rel="icon" href="/static/favicon.ico" />
+  </head>
+  <body>
+    {% include "partials/sidebar.html" %}
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <strong>Home</strong>
+          <span>Continue reading</span>
+        </div>
+        <a class="btn ghost" href="/series">Series</a>
+      </div>
+    </div>
+
+    <div class="container">
+      {% if continue_items|length == 0 %}
+        <div class="card">
+          <h3>No recent reads</h3>
+          <div class="muted">Start a series from the Series page to see it here.</div>
+          <a class="btn" href="/series" style="margin-top:10px;">Browse Series</a>
+        </div>
+      {% else %}
+        <div class="section-title">Continue Reading</div>
+        <div class="continue-grid">
+          {% for item in continue_items %}
+            <div class="card continue-card">
+              {% if item.preview_url %}
+                <div class="continue-preview">
+                  <img src="{{ item.preview_url }}" alt="{{ item.display_title }} preview" />
+                </div>
+              {% elif item.poster_url %}
+                <div class="continue-preview">
+                  <img src="{{ item.poster_url }}" alt="{{ item.display_title }} poster" />
+                </div>
+              {% endif %}
+              <h3><a href="/comic/{{ item.comic.slug }}">{{ item.display_title }}</a></h3>
+              <div class="muted">{{ item.year_title }} • Page {{ item.page_num }}</div>
+              <a class="btn" href="{{ item.resume_url }}" style="margin-top:10px;">Resume</a>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% include "partials/footer.html" %}
+    {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
+  </body>
+</html>

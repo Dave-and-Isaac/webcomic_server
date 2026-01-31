@@ -64,6 +64,165 @@ body {
   font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 20;
+}
+
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.sidebar-brand {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--text);
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, .02);
+}
+
+.nav-link:hover {
+  border-color: rgba(154, 208, 255, .35);
+  background: rgba(255, 255, 255, .05);
+}
+
+.nav-link.active {
+  border-color: rgba(154, 208, 255, .45);
+  background: rgba(154, 208, 255, .12);
+}
+
+.nav-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  background: var(--panel2);
+}
+
+.nav-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+}
+
+.sidebar-user {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, .02);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: var(--panel2);
+}
+
+.sidebar-username {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+}
+
+body.sidebar-collapsed .sidebar {
+  width: 68px;
+}
+
+body.sidebar-collapsed .sidebar-brand,
+body.sidebar-collapsed .nav-label,
+body.sidebar-collapsed .sidebar-user-info {
+  display: none;
+}
+
+body.sidebar-collapsed .sidebar-user {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+@media (max-width: 860px) {
+  .sidebar {
+    width: 210px;
+  }
+  body.sidebar-collapsed .sidebar {
+    width: 0;
+    padding: 0;
+    border-right: 0;
+    overflow: hidden;
+  }
+}
+
 html[data-theme="light"] body,
 html[data-theme="system"] body {
   background: radial-gradient(1200px 800px at 20% 0%, #ffffff 0%, var(--bg) 55%);
@@ -174,6 +333,42 @@ a:hover {
 .library-grid {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 18px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 6px 0 12px;
+}
+
+.continue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.continue-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.continue-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, .02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.continue-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card {
@@ -366,6 +561,20 @@ button.btn:hover {
 
 .btn.ghost {
   background: transparent;
+}
+
+.btn.active {
+  border-color: rgba(154, 208, 255, .45);
+  background: rgba(154, 208, 255, .12);
+}
+
+.btn.danger {
+  border-color: rgba(255, 110, 110, .55);
+  color: #ffb2b2;
+}
+
+.btn.danger:hover {
+  background: rgba(255, 110, 110, .12);
 }
 
 .btn.disabled {
@@ -585,7 +794,7 @@ body {
   align-items: start;
 }
 
-.sidebar {
+.admin-sidebar {
   position: sticky;
   top: 86px;
   background: var(--panel2);
@@ -594,12 +803,12 @@ body {
   padding: 12px;
 }
 
-.sidebar-title {
+.admin-sidebar-title {
   font-weight: 700;
   margin-bottom: 10px;
 }
 
-.sidebar-link {
+.admin-sidebar-link {
   display: block;
   padding: 8px 10px;
   border-radius: 10px;
@@ -609,12 +818,12 @@ body {
   margin-bottom: 6px;
 }
 
-.sidebar-link:hover {
+.admin-sidebar-link:hover {
   border-color: var(--border);
   background: rgba(255, 255, 255, .03);
 }
 
-.sidebar-link.active {
+.admin-sidebar-link.active {
   border-color: rgba(154, 208, 255, .35);
   background: rgba(154, 208, 255, .08);
 }
@@ -698,7 +907,7 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
+  .admin-sidebar {
     position: static;
   }
 }

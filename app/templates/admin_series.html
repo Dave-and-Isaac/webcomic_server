@@ -8,19 +8,14 @@
     <link rel="icon" href="/static/favicon.ico" />
   </head>
   <body>
+    {% include "partials/sidebar.html" %}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
           <strong><a href="/admin" style="color:inherit; text-decoration:none;">Admin</a></strong>
           <span>Edit Series</span>
         </div>
-        <div class="row">
-          <a class="btn ghost" href="/">Library</a>
-          <a class="btn ghost" href="/settings">Settings</a>
-          <form method="post" action="/logout">
-            <button class="btn" type="submit">Logout</button>
-          </form>
-        </div>
+        <a class="btn ghost" href="/admin">&larr; Admin</a>
       </div>
     </div>
 
@@ -90,5 +85,7 @@
 
     {% include "partials/footer.html" %}
     {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
   </body>
 </html>

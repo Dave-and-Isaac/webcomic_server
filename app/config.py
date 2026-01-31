@@ -4,6 +4,7 @@ from pathlib import Path
 CONFIG_DIR = Path("config").resolve()
 POSTERS_DIR = CONFIG_DIR / "posters"
 LOGOS_DIR = CONFIG_DIR / "logos"
+AVATARS_DIR = CONFIG_DIR / "avatars"
 SERIES_JSON = CONFIG_DIR / "series.json"
 
 
@@ -12,6 +13,7 @@ def ensure_config() -> None:
         raise RuntimeError("Missing required config directory: ./config")
     POSTERS_DIR.mkdir(parents=True, exist_ok=True)
     LOGOS_DIR.mkdir(parents=True, exist_ok=True)
+    AVATARS_DIR.mkdir(parents=True, exist_ok=True)
     if not SERIES_JSON.exists():
         SERIES_JSON.write_text("{}", encoding="utf-8")
 

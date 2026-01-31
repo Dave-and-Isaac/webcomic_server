@@ -8,21 +8,14 @@
     <link rel="icon" href="/static/favicon.ico" />
   </head>
   <body>
+    {% include "partials/sidebar.html" %}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <strong><a href="/" style="color:inherit; text-decoration:none;">Webcomic Reader</a></strong>
-          <span>Settings</span>
+          <strong>Settings</strong>
+          <span>Preferences</span>
         </div>
-        <div class="row">
-          {% if current_user and current_user.is_admin %}
-            <a class="btn ghost" href="/admin">Admin</a>
-          {% endif %}
-          <a class="btn ghost" href="/">Library</a>
-          <form method="post" action="/logout">
-            <button class="btn" type="submit">Logout</button>
-          </form>
-        </div>
+        <a class="btn ghost" href="/home">&larr; Home</a>
       </div>
     </div>
 
@@ -63,9 +56,19 @@
           <button class="btn" type="submit">Save</button>
         </form>
       </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3>Reading Progress</h3>
+        <div class="muted">Reset all reading progress for everyone.</div>
+        <form method="post" action="/settings/reset-progress" style="margin-top:10px;">
+          <button class="btn danger" type="submit">Reset All Progress</button>
+        </form>
+      </div>
     </div>
 
     {% include "partials/footer.html" %}
     {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
   </body>
 </html>

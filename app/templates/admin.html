@@ -8,27 +8,22 @@
     <link rel="icon" href="/static/favicon.ico" />
   </head>
   <body>
+    {% include "partials/sidebar.html" %}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <strong><a href="/" style="color:inherit; text-decoration:none;">Webcomic Reader</a></strong>
-          <span>Admin Settings</span>
+          <strong>Admin</strong>
+          <span>Settings</span>
         </div>
-        <div class="row">
-          <a class="btn ghost" href="/">Library</a>
-          <a class="btn ghost" href="/settings">Settings</a>
-          <form method="post" action="/logout">
-            <button class="btn" type="submit">Logout</button>
-          </form>
-        </div>
+        <a class="btn ghost" href="/home">&larr; Home</a>
       </div>
     </div>
 
     <div class="container admin-layout">
-      <aside class="sidebar">
-        <div class="sidebar-title">Admin</div>
-        <a class="sidebar-link {% if section == 'overview' %}active{% endif %}" href="/admin?section=overview">Overview</a>
-        <a class="sidebar-link {% if section == 'users' %}active{% endif %}" href="/admin?section=users">Users</a>
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar-title">Admin</div>
+        <a class="admin-sidebar-link {% if section == 'overview' %}active{% endif %}" href="/admin?section=overview">Overview</a>
+        <a class="admin-sidebar-link {% if section == 'users' %}active{% endif %}" href="/admin?section=users">Users</a>
       </aside>
 
       <main class="admin-content">
@@ -129,5 +124,7 @@
 
     {% include "partials/footer.html" %}
     {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
   </body>
 </html>

@@ -20,6 +20,7 @@ class User:
     theme: str
     keyboard_enabled: bool
     default_view: str
+    avatar: str | None
 
 
 def _hash_password_raw(password: str, salt: bytes) -> str:
@@ -70,7 +71,7 @@ def get_user_by_username(username: str) -> User | None:
     with db() as conn:
         row = conn.execute(
             """
-            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view
+            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar
             FROM users
             WHERE username=?
             """,
@@ -87,6 +88,7 @@ def get_user_by_username(username: str) -> User | None:
             row["theme"],
             bool(row["keyboard_enabled"]),
             row["default_view"],
+            row["avatar"],
         )
 
 
@@ -94,7 +96,7 @@ def get_user_by_id(user_id: int) -> User | None:
     with db() as conn:
         row = conn.execute(
             """
-            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view
+            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar
             FROM users
             WHERE id=?
             """,
@@ -111,6 +113,7 @@ def get_user_by_id(user_id: int) -> User | None:
             row["theme"],
             bool(row["keyboard_enabled"]),
             row["default_view"],
+            row["avatar"],
         )
 
 
@@ -118,8 +121,8 @@ def create_user(username: str, password: str, is_admin: bool) -> User:
     with db() as conn:
         cur = conn.execute(
             """
-            INSERT INTO users(username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view)
-            VALUES (?, ?, ?, 1, 'system', 1, 'read')
+            INSERT INTO users(username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar)
+            VALUES (?, ?, ?, 1, 'system', 1, 'read', NULL)
             """,
             (username, hash_password(password), 1 if is_admin else 0),
         )
@@ -131,7 +134,7 @@ def list_users() -> Iterable[User]:
     with db() as conn:
         rows = conn.execute(
             """
-            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view
+            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar
             FROM users
             ORDER BY username COLLATE NOCASE
             """
@@ -146,6 +149,7 @@ def list_users() -> Iterable[User]:
                 r["theme"],
                 bool(r["keyboard_enabled"]),
                 r["default_view"],
+                r["avatar"],
             )
             for r in rows
         ]
@@ -179,6 +183,22 @@ def update_reader_prefs(user_id: int, keyboard_enabled: bool, default_view: str)
         )
 
 
+def update_username(user_id: int, username: str) -> None:
+    with db() as conn:
+        conn.execute(
+            "UPDATE users SET username=? WHERE id=?",
+            (username, user_id),
+        )
+
+
+def update_avatar(user_id: int, avatar: str | None) -> None:
+    with db() as conn:
+        conn.execute(
+            "UPDATE users SET avatar=? WHERE id=?",
+            (avatar, user_id),
+        )
+
+
 def create_session(user_id: int) -> str:
     token = secrets.token_urlsafe(32)
     with db() as conn:
@@ -198,7 +218,7 @@ def get_user_by_session(token: str) -> User | None:
     with db() as conn:
         row = conn.execute(
             """
-            SELECT u.id, u.username, u.password_hash, u.is_admin, u.must_change_password, u.theme, keyboard_enabled, default_view
+            SELECT u.id, u.username, u.password_hash, u.is_admin, u.must_change_password, u.theme, keyboard_enabled, default_view, avatar
             FROM sessions s
             JOIN users u ON u.id = s.user_id
             WHERE s.token=?
@@ -220,6 +240,7 @@ def get_user_by_session(token: str) -> User | None:
             row["theme"],
             bool(row["keyboard_enabled"]),
             row["default_view"],
+            row["avatar"],
         )
 
 

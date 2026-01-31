@@ -2,30 +2,22 @@
 <html data-theme="{{ theme }}">
   <head>
     <meta charset="utf-8" />
-    <title>Library</title>
+    <title>Series</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/static/app.css" />
     <link rel="icon" href="/static/favicon.ico" />
   </head>
   <body>
+    {% include "partials/sidebar.html" %}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <strong>Webcomic Reader</strong>
+          <strong>StripStash</strong>
           <span>Library • Series</span>
         </div>
-        <div class="row">
-          {% if current_user and current_user.is_admin %}
-            <a class="btn ghost" href="/admin">Admin</a>
-          {% endif %}
-          <a class="btn ghost" href="/settings">Settings</a>
-          <form method="post" action="/rescan">
-            <button class="btn" type="submit">Rescan</button>
-          </form>
-          <form method="post" action="/logout">
-            <button class="btn" type="submit">Logout</button>
-          </form>
-        </div>
+        <form method="post" action="/rescan">
+          <button class="btn" type="submit">Rescan</button>
+        </form>
       </div>
     </div>
 
@@ -78,5 +70,7 @@
     </div>
     {% include "partials/footer.html" %}
     {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
   </body>
 </html>

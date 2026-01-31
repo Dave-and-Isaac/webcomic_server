@@ -1,4 +1,4 @@
-# Webcomic Reader
+# StripStash
 
 **Note:** This project was written with AI assistance.
 

@@ -91,6 +91,7 @@ def init_db() -> None:
         ensure_user_theme_column(conn)
         ensure_user_keyboard_column(conn)
         ensure_user_default_view_column(conn)
+        ensure_user_avatar_column(conn)
 
 
 def ensure_user_theme_column(conn: sqlite3.Connection) -> None:
@@ -114,6 +115,12 @@ def ensure_user_default_view_column(conn: sqlite3.Connection) -> None:
     cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
     if "default_view" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN default_view TEXT NOT NULL DEFAULT 'read'")
+
+
+def ensure_user_avatar_column(conn: sqlite3.Connection) -> None:
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+    if "avatar" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN avatar TEXT")
 
 
 def get_setting(key: str) -> str | None:
@@ -246,3 +253,8 @@ def delete_progress_for_year(comic_id: int, year_id: int) -> None:
 def delete_progress_for_comic(comic_id: int) -> None:
     with db() as conn:
         conn.execute("DELETE FROM progress WHERE comic_id=?", (comic_id,))
+
+
+def delete_all_progress() -> None:
+    with db() as conn:
+        conn.execute("DELETE FROM progress")

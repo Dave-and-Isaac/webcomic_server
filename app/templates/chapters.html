@@ -8,23 +8,14 @@
     <link rel="icon" href="/static/favicon.ico" />
   </head>
   <body>
+    {% include "partials/sidebar.html" %}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <strong><a href="/" style="color:inherit; text-decoration:none;">Webcomic Reader</a></strong>
-          <span>Series • Years</span>
+          <strong><a href="/series" style="color:inherit; text-decoration:none;">Series</a></strong>
+          <span>{{ comic.title }} • Years</span>
         </div>
-        <div class="row">
-          <a class="btn ghost" href="/">&larr; Library</a>
-          {% if current_user and current_user.is_admin %}
-            <a class="btn ghost" href="/admin">Admin</a>
-          {% endif %}
-          <a class="btn ghost" href="/settings">Settings</a>
-          <a class="btn" href="/resume/{{ comic.slug }}">Resume</a>
-          <form method="post" action="/logout">
-            <button class="btn" type="submit">Logout</button>
-          </form>
-        </div>
+        <a class="btn ghost" href="/series">&larr; Series</a>
       </div>
     </div>
 
@@ -66,12 +57,12 @@
           <div class="muted">Expected folders like <span class="code">Series Name/2010/*.png</span>.</div>
         </div>
       {% else %}
-        <div class="grid">
-          {% for row in years %}
-            {% set year = row.year %}
-            {% set read_url = '/read/' ~ comic.slug ~ '/' ~ year.slug %}
-            {% set browse_url = '/browse/' ~ comic.slug ~ '/' ~ year.slug %}
-            <div class="card">
+      <div class="grid">
+        {% for row in years %}
+          {% set year = row.year %}
+          {% set read_url = '/read/' ~ comic.slug ~ '/' ~ year.slug %}
+          {% set browse_url = '/browse/' ~ comic.slug ~ '/' ~ year.slug %}
+          <div class="card">
               <h3>
                 <a href="{{ browse_url if default_view == 'browse' else read_url }}">{{ year.title }}</a>
               </h3>
@@ -91,10 +82,12 @@
             </div>
             </div>
           {% endfor %}
-        </div>
+      </div>
       {% endif %}
     </div>
     {% include "partials/footer.html" %}
     {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
   </body>
 </html>

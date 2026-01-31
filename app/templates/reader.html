@@ -8,6 +8,7 @@
     <link rel="icon" href="/static/favicon.ico" />
   </head>
   <body>
+    {% include "partials/sidebar.html" %}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="brand">
@@ -19,26 +20,7 @@
             {% endif %}
           </span>
         </div>
-        <div class="row">
-          <a class="btn ghost" href="/comic/{{ comic.slug }}">&larr; Years</a>
-          {% if prev_url %}
-            <a class="btn" href="{{ prev_url }}" rel="prev">Prev</a>
-          {% else %}
-            <span class="btn disabled">Prev</span>
-          {% endif %}
-          {% if next_url %}
-            <a class="btn" href="{{ next_url }}" rel="next">Next</a>
-          {% else %}
-            <span class="btn disabled">Next</span>
-          {% endif %}
-          {% if current_user and current_user.is_admin %}
-            <a class="btn ghost" href="/admin">Admin</a>
-          {% endif %}
-          <a class="btn ghost" href="/settings">Settings</a>
-          <form method="post" action="/logout">
-            <button class="btn" type="submit">Logout</button>
-          </form>
-        </div>
+        <a class="btn ghost" href="/comic/{{ comic.slug }}">&larr; Years</a>
       </div>
     </div>
 
@@ -169,5 +151,7 @@
     </script>
     {% include "partials/footer.html" %}
     {% include "partials/change_password_modal.html" %}
+  </div>
+  </div>
   </body>
 </html>

@@ -1,0 +1,92 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Toggle menu">≡</button>
+      <div class="sidebar-brand">StripStash</div>
+    </div>
+    <nav class="sidebar-nav">
+      {% set path = active_path %}
+      <a class="nav-link{% if path == '/' or path.startswith('/home') %} active{% endif %}" href="/home">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 10.5L12 3l9 7.5"></path>
+            <path d="M5 10.5V21h14V10.5"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a class="nav-link{% if path.startswith('/series') or path.startswith('/comic') %} active{% endif %}" href="/series">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect>
+            <path d="M9.2 5.5V18.5"></path>
+            <path d="M14.8 5.5V18.5"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Series</span>
+      </a>
+      <a class="nav-link{% if path.startswith('/settings') %} active{% endif %}" href="/settings">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.5"></circle>
+            <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Settings</span>
+      </a>
+      <a class="nav-link{% if path.startswith('/profile') %} active{% endif %}" href="/profile">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 21c2-4 6-6 8-6s6 2 8 6"></path>
+          </svg>
+        </span>
+        <span class="nav-label">Profile</span>
+      </a>
+      {% if current_user and current_user.is_admin %}
+        <a class="nav-link{% if path.startswith('/admin') %} active{% endif %}" href="/admin">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5"></circle>
+              <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"></path>
+              <path d="M17 5h4"></path>
+              <path d="M19 3v4"></path>
+            </svg>
+          </span>
+          <span class="nav-label">Admin</span>
+        </a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        {% if avatar_url %}
+          <img src="{{ avatar_url }}" alt="User avatar" class="avatar" />
+        {% else %}
+          <div class="avatar placeholder">{{ (current_user.username[0] if current_user else 'U')|upper }}</div>
+        {% endif %}
+        <div class="sidebar-user-info">
+          <div class="sidebar-username">{{ current_user.username if current_user else 'Guest' }}</div>
+          <form method="post" action="/logout">
+            <button class="btn ghost" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="app-content">
+    <script>
+      (function () {
+        const key = "sidebarCollapsed";
+        const body = document.body;
+        const btn = document.getElementById("sidebarToggle");
+        const stored = localStorage.getItem(key);
+        if (stored === "1") body.classList.add("sidebar-collapsed");
+        if (btn) {
+          btn.addEventListener("click", () => {
+            const collapsed = !body.classList.contains("sidebar-collapsed");
+            body.classList.toggle("sidebar-collapsed", collapsed);
+            localStorage.setItem(key, collapsed ? "1" : "0");
+          });
+        }
+      })();
+    </script>

@@ -7,20 +7,25 @@
     <link rel="stylesheet" href="/static/app.css" />
     <link rel="icon" href="/static/favicon.ico" />
   </head>
-  <body class="centered-page">
-    <div class="auth-card">
-      <h2>Webcomic Reader</h2>
-      <div class="muted">Sign in to continue.</div>
-      {% if error %}
-        <div class="alert error">{{ error }}</div>
-      {% endif %}
-      <form method="post" action="/login" class="stack" style="margin-top:14px;">
-        <input class="input" type="text" name="username" placeholder="Username" required />
-        <input class="input" type="password" name="password" placeholder="Password" required />
-        <button class="btn" type="submit">Login</button>
-      </form>
-      <div class="muted" style="margin-top:10px;">Default admin: admin / admin</div>
+  <body>
+    {% include "partials/sidebar.html" %}
+    <div class="centered-page">
+      <div class="auth-card">
+        <h2>StripStash</h2>
+        <div class="muted">Sign in to continue.</div>
+        {% if error %}
+          <div class="alert error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login" class="stack" style="margin-top:14px;">
+          <input class="input" type="text" name="username" placeholder="Username" required />
+          <input class="input" type="password" name="password" placeholder="Password" required />
+          <button class="btn" type="submit">Login</button>
+        </form>
+        <div class="muted" style="margin-top:10px;">Default admin: admin / admin</div>
+      </div>
     </div>
     {% include "partials/footer.html" %}
+  </div>
+  </div>
   </body>
 </html>
