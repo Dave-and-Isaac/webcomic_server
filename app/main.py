@@ -1,9 +1,10 @@
+import mimetypes
 import os
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from fastapi import FastAPI, Request, HTTPException, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
@@ -41,6 +42,9 @@ from .library import (
     get_years_for_comic,
     get_year_by_slugs,
     get_year_images,
+    is_archive_file,
+    is_image_name,
+    read_archive_image,
 )
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -670,7 +674,7 @@ def restart_year(comic_slug: str, year_slug: str):
     return RedirectResponse(url=f"/read/{comic.slug}/{year.slug}/1", status_code=303)
 
 
-@app.get("/asset/{comic_slug}/{year_slug}/{filename}")
+@app.get("/asset/{comic_slug}/{year_slug}/{filename:path}")
 def asset(comic_slug: str, year_slug: str, filename: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
@@ -679,17 +683,32 @@ def asset(comic_slug: str, year_slug: str, filename: str):
     if not year:
         raise HTTPException(status_code=404, detail="Year not found")
 
-    year_dir = Path(year.path).resolve()
-    file_path = (year_dir / filename).resolve()
+    year_path = Path(year.path).resolve()
 
-    # Safety: ensure file is within year_dir
-    if year_dir not in file_path.parents:
-        raise HTTPException(status_code=400, detail="Invalid path")
+    if year_path.is_dir():
+        file_path = (year_path / filename).resolve()
 
-    if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
+        # Safety: ensure file is within year_dir
+        if year_path not in file_path.parents:
+            raise HTTPException(status_code=400, detail="Invalid path")
 
-    return FileResponse(str(file_path))
+        if not file_path.exists() or not file_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+
+        return FileResponse(str(file_path))
+
+    if is_archive_file(year_path):
+        if ".." in PurePosixPath(filename).parts:
+            raise HTTPException(status_code=400, detail="Invalid path")
+        if not is_image_name(filename):
+            raise HTTPException(status_code=404, detail="File not found")
+        data = read_archive_image(year_path, filename)
+        if data is None:
+            raise HTTPException(status_code=404, detail="File not found")
+        media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        return Response(content=data, media_type=media_type)
+
+    raise HTTPException(status_code=404, detail="File not found")
 
 
 @app.get("/config/posters/{filename}")

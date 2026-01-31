@@ -167,6 +167,15 @@ a:hover {
   margin-top: 14px;
 }
 
+.library-container {
+  max-width: min(1200px, 96vw);
+}
+
+.library-grid {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+}
+
 .card {
   background: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .01));
   border: 1px solid var(--border);

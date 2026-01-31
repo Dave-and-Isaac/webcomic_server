@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <div class="container">
+    <div class="container library-container">
       {% if error %}
         <div class="alert error">{{ error }}</div>
       {% endif %}
@@ -43,7 +43,7 @@
           <div class="muted">Create a folder inside <span class="code">./comics</span> (or set <span class="code">COMICS_DIR</span>).</div>
         </div>
       {% else %}
-        <div class="grid">
+        <div class="grid library-grid">
           {% for row in comics %}
             {% set c = row.comic %}
             {% set lr = row.last_read %}

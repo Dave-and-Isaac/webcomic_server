@@ -1,12 +1,19 @@
 import os
 import re
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+try:
+    import rarfile  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    rarfile = None
+
 from .db import db
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+ARCHIVE_EXTS = {".cbz", ".cbr", ".zip"}
 
 
 @dataclass(frozen=True)
@@ -38,19 +45,65 @@ def is_image_file(p: Path) -> bool:
     return p.is_file() and p.suffix.lower() in IMAGE_EXTS
 
 
+def is_image_name(name: str) -> bool:
+    return Path(name).suffix.lower() in IMAGE_EXTS
+
+
+def is_archive_file(p: Path) -> bool:
+    return p.is_file() and p.suffix.lower() in ARCHIVE_EXTS
+
+
 def list_images_in_dir(dir_path: Path) -> list[Path]:
     imgs = [p for p in dir_path.iterdir() if is_image_file(p)]
     # Sort in a predictable way (supports 001.jpg, 1.jpg, etc.)
     return sorted(imgs, key=lambda p: p.name.lower())
 
 
-def detect_year_dirs(comic_dir: Path) -> list[Path]:
-    """If comic_dir contains subdirectories that contain images, treat those as years."""
-    year_dirs = []
-    for child in sorted([p for p in comic_dir.iterdir() if p.is_dir()], key=lambda p: p.name.lower()):
-        if any(is_image_file(p) for p in child.iterdir()):
-            year_dirs.append(child)
-    return year_dirs
+def list_images_in_archive(archive_path: Path) -> list[str]:
+    suffix = archive_path.suffix.lower()
+    if suffix in {".cbz", ".zip"}:
+        with zipfile.ZipFile(archive_path) as zf:
+            names = [
+                info.filename
+                for info in zf.infolist()
+                if not info.is_dir() and is_image_name(info.filename)
+            ]
+    elif suffix == ".cbr" and rarfile is not None:
+        with rarfile.RarFile(archive_path) as rf:
+            names = [
+                info.filename
+                for info in rf.infolist()
+                if not info.is_dir() and is_image_name(info.filename)
+            ]
+    else:
+        names = []
+    return sorted(names, key=lambda n: n.lower())
+
+
+def read_archive_image(archive_path: Path, filename: str) -> bytes | None:
+    suffix = archive_path.suffix.lower()
+    try:
+        if suffix in {".cbz", ".zip"}:
+            with zipfile.ZipFile(archive_path) as zf:
+                return zf.read(filename)
+        if suffix == ".cbr" and rarfile is not None:
+            with rarfile.RarFile(archive_path) as rf:
+                return rf.read(filename)
+    except Exception:
+        return None
+    return None
+
+
+def detect_year_entries(comic_dir: Path) -> list[Path]:
+    """Collect year folders that contain images and archive files in the series root."""
+    year_entries: list[Path] = []
+    for child in comic_dir.iterdir():
+        if child.is_dir():
+            if any(is_image_file(p) for p in child.iterdir()):
+                year_entries.append(child)
+        elif is_archive_file(child):
+            year_entries.append(child)
+    return sorted(year_entries, key=lambda p: p.name.lower())
 
 
 def scan_comics(comics_root: Path) -> None:
@@ -66,7 +119,20 @@ def scan_comics(comics_root: Path) -> None:
     comic_dirs = [p for p in comics_root.iterdir() if p.is_dir()]
     comic_dirs.sort(key=lambda p: p.name.lower())
 
+    desired_comic_slugs = []
+    for comic_dir in comic_dirs:
+        desired_comic_slugs.append(slugify(comic_dir.name))
+
     with db() as conn:
+        if desired_comic_slugs:
+            placeholders = ",".join(["?"] * len(desired_comic_slugs))
+            conn.execute(
+                f"DELETE FROM comic WHERE slug NOT IN ({placeholders})",
+                (*desired_comic_slugs,),
+            )
+        else:
+            conn.execute("DELETE FROM comic")
+
         for comic_dir in comic_dirs:
             comic_title = comic_dir.name
             comic_slug = slugify(comic_title)
@@ -87,13 +153,16 @@ def scan_comics(comics_root: Path) -> None:
                 )
                 comic_id = int(cur.lastrowid)
 
-            year_dirs = detect_year_dirs(comic_dir)
-
+            year_entries = detect_year_entries(comic_dir)
             years_to_upsert: list[tuple[str, str, str, int]] = []
-            for idx, year_dir in enumerate(year_dirs):
-                title = year_dir.name
-                slug = slugify(title)
-                years_to_upsert.append((slug, title, str(year_dir), idx))
+            for idx, year_entry in enumerate(year_entries):
+                if year_entry.is_dir():
+                    title = year_entry.name
+                    slug = slugify(title)
+                else:
+                    title = year_entry.stem
+                    slug = slugify(year_entry.name)
+                years_to_upsert.append((slug, title, str(year_entry), idx))
 
             # Delete years that no longer exist on disk
             desired_slugs = [slug for (slug, _title, _path, _idx) in years_to_upsert]
@@ -187,6 +256,10 @@ def get_year_by_slugs(comic_id: int, year_slug: str) -> Year | None:
 
 def get_year_images(year_path: str) -> list[str]:
     p = Path(year_path)
-    if not p.exists() or not p.is_dir():
+    if not p.exists():
         return []
-    return [img.name for img in list_images_in_dir(p)]
+    if p.is_dir():
+        return [img.name for img in list_images_in_dir(p)]
+    if is_archive_file(p):
+        return list_images_in_archive(p)
+    return []
