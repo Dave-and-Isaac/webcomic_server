@@ -1,6 +1,7 @@
 services:
-  webcomic_reader:
+  stripstash:
     image: ghcr.io/dave-and-isaac/webcomic-reader:latest
+    container_name: stripstash
     ports:
       - "8000:8000"
     environment:

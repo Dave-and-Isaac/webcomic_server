@@ -29,8 +29,9 @@
         <div class="series-meta">
           {% if logo_url %}
             <img class="series-logo" src="{{ logo_url }}" alt="{{ comic.title }} logo" />
+          {% else %}
+            <h2>{{ meta.title or comic.title }}</h2>
           {% endif %}
-          <h2>{{ meta.title or comic.title }}</h2>
           {% if meta.year_range %}
             <div class="muted">{{ meta.year_range }}</div>
           {% endif %}
@@ -38,7 +39,7 @@
             <div class="series-summary">{{ meta.summary }}</div>
           {% endif %}
           {% if meta.website %}
-            <a class="btn ghost" href="{{ meta.website }}" target="_blank" rel="noopener noreferrer">Official website</a>
+            <a class="btn ghost series-website" href="{{ meta.website }}" target="_blank" rel="noopener noreferrer">Official website</a>
           {% endif %}
         </div>
       </div>
