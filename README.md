@@ -108,4 +108,4 @@ GET /health
 
 ## License
 
-TBD
+MIT
