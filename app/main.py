@@ -308,7 +308,8 @@ def library(request: Request, error: str | None = None, success: str | None = No
         meta = series_cfg.get(c.slug, {}) if isinstance(series_cfg, dict) else {}
         display_title = meta.get("title") or c.title
         poster = meta.get("poster")
-        poster_url = f"/config/posters/{poster}" if poster else None
+        poster_version = meta.get("poster_updated") if isinstance(meta, dict) else None
+        poster_url = f"/config/posters/{poster}?v={poster_version}" if poster else None
         years = get_years_for_comic(c.id)
         year_count = len(years)
         total_images = 0
@@ -363,7 +364,8 @@ def home(request: Request):
         meta = series_cfg.get(c.slug, {}) if isinstance(series_cfg, dict) else {}
         display_title = meta.get("title") or c.title
         poster = meta.get("poster")
-        poster_url = f"/config/posters/{poster}" if poster else None
+        poster_version = meta.get("poster_updated") if isinstance(meta, dict) else None
+        poster_url = f"/config/posters/{poster}?v={poster_version}" if poster else None
         images = get_year_images(year.path)
         page_index = lr["page_index"]
         page_num = page_index + 1
@@ -584,8 +586,10 @@ def admin_series_update(
 
     if remove_poster:
         meta.pop("poster", None)
+        meta.pop("poster_updated", None)
     if remove_logo:
         meta.pop("logo", None)
+        meta.pop("logo_updated", None)
 
     if poster and poster.filename:
         name = poster.filename.lower()
@@ -599,6 +603,7 @@ def admin_series_update(
         with dest.open("wb") as f:
             f.write(poster.file.read())
         meta["poster"] = safe_name
+        meta["poster_updated"] = int(time.time())
 
     if logo and logo.filename:
         name = logo.filename.lower()
@@ -612,6 +617,7 @@ def admin_series_update(
         with dest.open("wb") as f:
             f.write(logo.file.read())
         meta["logo"] = safe_name
+        meta["logo_updated"] = int(time.time())
 
     if meta:
         series_cfg[comic.slug] = meta
@@ -654,8 +660,10 @@ def comic_page(request: Request, comic_slug: str, order: str = "asc"):
     meta = series_cfg.get(comic.slug, {}) if isinstance(series_cfg, dict) else {}
     poster = meta.get("poster")
     logo = meta.get("logo")
-    poster_url = f"/config/posters/{poster}" if poster else None
-    logo_url = f"/config/logos/{logo}" if logo else None
+    poster_version = meta.get("poster_updated") if isinstance(meta, dict) else None
+    logo_version = meta.get("logo_updated") if isinstance(meta, dict) else None
+    poster_url = f"/config/posters/{poster}?v={poster_version}" if poster else None
+    logo_url = f"/config/logos/{logo}?v={logo_version}" if logo else None
     order = "desc" if order == "desc" else "asc"
     if order == "desc":
         years = list(reversed(years))
