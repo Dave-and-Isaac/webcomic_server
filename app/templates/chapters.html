@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <div class="container">
+    <div class="container series-container">
       <div class="series-hero">
         {% if poster_url %}
           <div class="series-poster">
@@ -57,7 +57,7 @@
           <div class="muted">Expected folders like <span class="code">Series Name/2010/*.png</span>.</div>
         </div>
       {% else %}
-      <div class="grid">
+        <div class="grid series-grid">
         {% for row in years %}
           {% set year = row.year %}
           {% set read_url = '/read/' ~ comic.slug ~ '/' ~ year.slug %}

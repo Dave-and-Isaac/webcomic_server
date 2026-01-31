@@ -335,6 +335,14 @@ a:hover {
   gap: 18px;
 }
 
+.series-container {
+  padding-bottom: calc(var(--footer-space) + 24px);
+}
+
+.series-grid {
+  gap: 18px;
+}
+
 .section-title {
   font-size: 15px;
   font-weight: 700;
