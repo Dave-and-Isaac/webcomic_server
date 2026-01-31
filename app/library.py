@@ -10,10 +10,21 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     rarfile = None
 
+try:
+    import fitz  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    fitz = None
+
+try:
+    from pypdf import PdfReader  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    PdfReader = None
+
 from .db import db
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 ARCHIVE_EXTS = {".cbz", ".cbr", ".zip"}
+PDF_EXTS = {".pdf"}
 
 
 @dataclass(frozen=True)
@@ -51,6 +62,10 @@ def is_image_name(name: str) -> bool:
 
 def is_archive_file(p: Path) -> bool:
     return p.is_file() and p.suffix.lower() in ARCHIVE_EXTS
+
+
+def is_pdf_file(p: Path) -> bool:
+    return p.is_file() and p.suffix.lower() in PDF_EXTS
 
 
 def list_images_in_dir(dir_path: Path) -> list[Path]:
@@ -97,6 +112,45 @@ def read_archive_image(archive_path: Path, filename: str) -> bytes | None:
     return None
 
 
+def get_pdf_page_count(pdf_path: Path) -> int:
+    if fitz is not None:
+        try:
+            with fitz.open(pdf_path) as doc:
+                return doc.page_count
+        except Exception:
+            return 0
+    if PdfReader is None:
+        return 0
+    try:
+        reader = PdfReader(str(pdf_path))
+        if getattr(reader, "is_encrypted", False):
+            try:
+                reader.decrypt("")
+            except Exception:
+                return 0
+        return len(reader.pages)
+    except Exception:
+        return 0
+
+
+def render_pdf_page(pdf_path: Path, page: int, dpi: int) -> bytes | None:
+    if fitz is None:
+        return None
+    if page < 1:
+        return None
+    try:
+        with fitz.open(pdf_path) as doc:
+            if page > doc.page_count:
+                return None
+            p = doc.load_page(page - 1)
+            zoom = dpi / 72.0
+            mat = fitz.Matrix(zoom, zoom)
+            pix = p.get_pixmap(matrix=mat, alpha=False)
+            return pix.tobytes("png")
+    except Exception:
+        return None
+
+
 def detect_year_entries(comic_dir: Path) -> list[Path]:
     """Collect year folders that contain images and archive files in the series root."""
     year_entries: list[Path] = []
@@ -104,7 +158,7 @@ def detect_year_entries(comic_dir: Path) -> list[Path]:
         if child.is_dir():
             if any(is_image_file(p) for p in child.iterdir()):
                 year_entries.append(child)
-        elif is_archive_file(child):
+        elif is_archive_file(child) or is_pdf_file(child):
             year_entries.append(child)
     return sorted(year_entries, key=lambda p: p.name.lower())
 
@@ -265,4 +319,7 @@ def get_year_images(year_path: str) -> list[str]:
         return [img.name for img in list_images_in_dir(p)]
     if is_archive_file(p):
         return list_images_in_archive(p)
+    if is_pdf_file(p):
+        page_count = get_pdf_page_count(p)
+        return [str(i + 1) for i in range(page_count)]
     return []

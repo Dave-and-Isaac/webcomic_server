@@ -40,6 +40,8 @@ comics/
 
 ## Local Development
 
+**Note:** Use Python 3.12 for local development (matches the Docker image and avoids PyMuPDF build issues on newer Python versions).
+
 1. Create a virtualenv and install deps:
 
 ```

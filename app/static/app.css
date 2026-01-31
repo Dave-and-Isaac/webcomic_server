@@ -468,6 +468,20 @@ hr.sep {
   width: 100%;
 }
 
+.pdf-spread {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.pdf-spread img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 .nav-zone {
   position: absolute;
   top: 0;
@@ -634,6 +648,11 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 10px;
 }
+
+.pdf-thumb {
+  background: rgba(0, 0, 0, .35);
+}
+
 
 .thumb {
   position: relative;

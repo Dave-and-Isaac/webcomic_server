@@ -45,10 +45,14 @@ from .library import (
     is_archive_file,
     is_image_name,
     read_archive_image,
+    is_pdf_file,
+    get_pdf_page_count,
+    render_pdf_page,
 )
 
 APP_ROOT = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(APP_ROOT / "templates"))
+PDF_CACHE_DIR = Path("data") / "pdf_cache"
 
 COMICS_ENV_VAR = "COMICS_DIR"
 COMICS_SETTING_KEY = "comics_dir"
@@ -551,16 +555,29 @@ def browse_year(request: Request, comic_slug: str, year_slug: str):
     if not year:
         raise HTTPException(status_code=404, detail="Year not found")
 
-    images = get_year_images(year.path)
+    year_path = Path(year.path)
+    is_pdf = is_pdf_file(year_path)
+    images = get_year_images(year.path) if not is_pdf else []
+    pdf_page_count = get_pdf_page_count(year_path) if is_pdf else 0
+    pdf_page_count_unknown = is_pdf and pdf_page_count == 0
+    page_count = pdf_page_count if is_pdf else len(images)
+    if is_pdf and page_count == 0:
+        page_count = 1
     items = []
-    for idx0, filename in enumerate(images):
-        page = idx0 + 1
+    pages = range(1, page_count + 1) if is_pdf else range(1, len(images) + 1)
+    for page in pages:
+        filename = f"Page {page}" if is_pdf else images[page - 1]
         items.append(
             {
                 "page": page,
                 "filename": filename,
-                "thumb_url": f"/asset/{comic.slug}/{year.slug}/{filename}",
+                "thumb_url": (
+                    f"/pdf-page/{comic.slug}/{year.slug}/{page}?dpi=120"
+                    if is_pdf
+                    else f"/asset/{comic.slug}/{year.slug}/{filename}"
+                ),
                 "read_url": f"/read/{comic.slug}/{year.slug}/{page}",
+                "is_pdf": is_pdf,
             }
         )
 
@@ -572,7 +589,9 @@ def browse_year(request: Request, comic_slug: str, year_slug: str):
             "comic": comic,
             "year": year,
             "items": items,
-            "page_count": len(images),
+            "page_count": page_count,
+            "is_pdf": is_pdf,
+            "pdf_page_count_unknown": pdf_page_count_unknown,
         },
     )
 
@@ -586,8 +605,15 @@ def reader(request: Request, comic_slug: str, year_slug: str, page: int):
     if not year:
         raise HTTPException(status_code=404, detail="Year not found")
 
-    images = get_year_images(year.path)
-    if not images:
+    year_path = Path(year.path)
+    is_pdf = is_pdf_file(year_path)
+    images = get_year_images(year.path) if not is_pdf else []
+    pdf_page_count = get_pdf_page_count(year_path) if is_pdf else 0
+    pdf_page_count_unknown = is_pdf and pdf_page_count == 0
+    page_count = pdf_page_count if is_pdf else len(images)
+    if is_pdf and page_count == 0:
+        page_count = max(1, page)
+    if not is_pdf and not images:
         return _render(
             request,
             "reader.html",
@@ -599,26 +625,47 @@ def reader(request: Request, comic_slug: str, year_slug: str, page: int):
                 "page_count": 0,
                 "image_url": None,
                 "page_filename": None,
+                "is_pdf": is_pdf,
+                "pdf_url": None,
+                "view_mode": "single",
+                "second_page": None,
+                "pdf_page_count_unknown": pdf_page_count_unknown,
                 "prev_url": None,
                 "next_url": None,
             },
         )
 
-    page_count = len(images)
-
-    # clamp page to [1..page_count]
+    # clamp page to [1..page_count] when known
     if page < 1:
         return RedirectResponse(url=f"/read/{comic_slug}/{year_slug}/1", status_code=303)
-    if page > page_count:
+    if not pdf_page_count_unknown and page > page_count:
         return RedirectResponse(url=f"/read/{comic_slug}/{year_slug}/{page_count}", status_code=303)
 
     idx0 = page - 1
-    filename = images[idx0]
+    filename = f"Page {page}" if is_pdf else images[idx0]
+    view_mode = request.query_params.get("view", "single")
+    if view_mode not in {"single", "spread"}:
+        view_mode = "single"
 
-    image_url = f"/asset/{comic_slug}/{year_slug}/{filename}"
+    image_url = None
+    second_image_url = None
+    pdf_url = None
+    second_page = None
+    if is_pdf:
+        image_url = f"/pdf-page/{comic_slug}/{year_slug}/{page}?dpi=250"
+        if view_mode == "spread" and (pdf_page_count_unknown or page + 1 <= page_count):
+            second_page = page + 1
+            second_image_url = f"/pdf-page/{comic_slug}/{year_slug}/{second_page}?dpi=250"
+    else:
+        image_url = f"/asset/{comic_slug}/{year_slug}/{filename}"
 
-    prev_url = f"/read/{comic_slug}/{year_slug}/{page - 1}" if page > 1 else None
-    next_url = f"/read/{comic_slug}/{year_slug}/{page + 1}" if page < page_count else None
+    view_qs = f"?view={view_mode}" if is_pdf else ""
+    prev_url = f"/read/{comic_slug}/{year_slug}/{page - 1}{view_qs}" if page > 1 else None
+    next_url = (
+        f"/read/{comic_slug}/{year_slug}/{page + 1}{view_qs}"
+        if (pdf_page_count_unknown or page < page_count)
+        else None
+    )
 
     # Save progress server-side on page load (simple MVP)
     upsert_progress(comic.id, year.id, idx0)
@@ -633,7 +680,13 @@ def reader(request: Request, comic_slug: str, year_slug: str, page: int):
             "page": page,
             "page_count": page_count,
             "image_url": image_url,
-            "page_filename": filename,
+            "second_image_url": second_image_url,
+            "page_filename": (f"Page {page}" if is_pdf else filename),
+            "is_pdf": is_pdf,
+            "pdf_url": pdf_url,
+            "view_mode": view_mode,
+            "second_page": second_page,
+            "pdf_page_count_unknown": pdf_page_count_unknown,
             "prev_url": prev_url,
             "next_url": next_url,
         },
@@ -723,6 +776,52 @@ def poster_asset(filename: str):
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(str(file_path))
+
+
+@app.get("/pdf/{comic_slug}/{year_slug}")
+def pdf_asset(comic_slug: str, year_slug: str):
+    comic = get_comic_by_slug(comic_slug)
+    if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    year = get_year_by_slugs(comic.id, year_slug)
+    if not year:
+        raise HTTPException(status_code=404, detail="Year not found")
+
+    file_path = Path(year.path).resolve()
+    if not is_pdf_file(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(file_path), media_type="application/pdf")
+
+
+@app.get("/pdf-page/{comic_slug}/{year_slug}/{page}")
+def pdf_page_asset(comic_slug: str, year_slug: str, page: int, dpi: int = 250):
+    comic = get_comic_by_slug(comic_slug)
+    if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    year = get_year_by_slugs(comic.id, year_slug)
+    if not year:
+        raise HTTPException(status_code=404, detail="Year not found")
+
+    file_path = Path(year.path).resolve()
+    if not is_pdf_file(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    safe_dpi = max(72, min(400, dpi))
+    cache_dir = (PDF_CACHE_DIR / comic.slug / year.slug).resolve()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / f"p{page}-d{safe_dpi}.png"
+
+    if not cache_file.exists():
+        data = render_pdf_page(file_path, page, safe_dpi)
+        if data is None:
+            raise HTTPException(status_code=404, detail="Page not found")
+        cache_file.write_bytes(data)
+
+    return FileResponse(str(cache_file), media_type="image/png")
 
 
 @app.get("/config/logos/{filename}")

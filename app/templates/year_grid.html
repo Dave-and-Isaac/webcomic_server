@@ -44,7 +44,7 @@
       {% else %}
         <div class="thumb-grid">
           {% for item in items %}
-            <a class="thumb" href="{{ item.read_url }}" title="Page {{ item.page }} — {{ item.filename }}">
+            <a class="thumb{% if item.is_pdf %} pdf-thumb{% endif %}" href="{{ item.read_url }}" title="Page {{ item.page }} — {{ item.filename }}">
               <img src="{{ item.thumb_url }}" alt="{{ item.filename }}" loading="lazy" />
               <div class="thumb-label">{{ item.page }}</div>
             </a>

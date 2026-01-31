@@ -12,7 +12,12 @@
       <div class="topbar-inner">
         <div class="brand">
           <strong><a href="/comic/{{ comic.slug }}" style="color:inherit; text-decoration:none;">{{ comic.title }}</a></strong>
-          <span>{{ year.title }}{% if page_count > 0 %} • Page {{ page }} / {{ page_count }}{% endif %}</span>
+          <span>
+            {{ year.title }}
+            {% if page_count > 0 %}
+              • Page {{ page }}{% if not pdf_page_count_unknown %} / {{ page_count }}{% endif %}
+            {% endif %}
+          </span>
         </div>
         <div class="row">
           <a class="btn ghost" href="/comic/{{ comic.slug }}">&larr; Years</a>
@@ -48,6 +53,10 @@
           </div>
         </div>
         <div class="reader-controls">
+          {% if is_pdf %}
+            <a class="btn ghost{% if view_mode == 'single' %} active{% endif %}" href="/read/{{ comic.slug }}/{{ year.slug }}/{{ page }}?view=single">Single</a>
+            <a class="btn ghost{% if view_mode == 'spread' %} active{% endif %}" href="/read/{{ comic.slug }}/{{ year.slug }}/{{ page }}?view=spread">Spread</a>
+          {% endif %}
           <button class="btn ghost" type="button" onclick="zoomBy(-0.1)">Zoom −</button>
           <button class="btn ghost" type="button" onclick="zoomBy(0.1)">Zoom +</button>
           <button class="btn ghost" type="button" onclick="resetZoom()">Reset</button>
@@ -64,7 +73,14 @@
             {% if next_url %}
               <a class="nav-zone right" href="{{ next_url }}" rel="next" aria-label="Next page"></a>
             {% endif %}
-            <img id="pageImage" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
+            {% if second_image_url %}
+              <div class="pdf-spread">
+                <img class="page-image" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
+                <img class="page-image" src="{{ second_image_url }}" alt="Page {{ second_page }}" />
+              </div>
+            {% else %}
+              <img id="pageImage" class="page-image" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
+            {% endif %}
           </div>
         {% else %}
           <div style="padding:24px;" class="muted">No images found in this year.</div>
@@ -119,24 +135,23 @@
       }
 
       function applySizing() {
-        const img = document.getElementById('pageImage');
-        if (!img) return;
-        if (!img.complete || !img.naturalWidth) return;
+        const imgs = document.querySelectorAll('.page-image');
+        if (!imgs.length) return;
         const zoom = getZoom();
-        img.style.width = '';
-        img.style.height = '';
-
-        img.style.width = (img.naturalWidth * zoom) + 'px';
-        img.style.height = 'auto';
+        imgs.forEach((img) => {
+          if (!img.complete || !img.naturalWidth) return;
+          img.style.width = '';
+          img.style.height = '';
+          img.style.width = (img.naturalWidth * zoom) + 'px';
+          img.style.height = 'auto';
+        });
       }
 
       setZoom(getZoom());
       window.addEventListener('resize', applySizing);
-      const imgEl = document.getElementById('pageImage');
-      if (imgEl) {
-        imgEl.addEventListener('load', applySizing);
-        applySizing();
-      }
+      const imgEls = document.querySelectorAll('.page-image');
+      imgEls.forEach((imgEl) => imgEl.addEventListener('load', applySizing));
+      applySizing();
 
       // Keyboard nav: left/right + space for next
       document.addEventListener("keydown", (e) => {
