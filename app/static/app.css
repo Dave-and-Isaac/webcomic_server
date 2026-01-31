@@ -631,7 +631,7 @@ hr.sep {
 .reader {
   max-width: min(var(--max), 1100px);
   margin: 0 auto;
-  padding: 12px 16px calc(24px + var(--footer-space));
+  padding: 12px 16px calc(40px + var(--footer-space));
 }
 
 .reader-head {
@@ -714,7 +714,8 @@ hr.sep {
   justify-content: center;
   gap: 10px;
   margin-top: 20px;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
+  padding-bottom: calc(var(--footer-space) * 0.35);
 }
 
 .kbd {
