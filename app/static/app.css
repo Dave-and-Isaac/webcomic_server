@@ -194,6 +194,7 @@ body {
 .app-content {
   flex: 1;
   min-width: 0;
+  padding-bottom: var(--footer-space);
 }
 
 body.sidebar-collapsed .sidebar {
@@ -333,6 +334,7 @@ a:hover {
 .library-grid {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 18px;
+  margin-bottom: calc(var(--footer-space) + 24px);
 }
 
 .series-container {
@@ -341,6 +343,7 @@ a:hover {
 
 .series-grid {
   gap: 18px;
+  margin-bottom: calc(var(--footer-space) + 24px);
 }
 
 .section-title {
