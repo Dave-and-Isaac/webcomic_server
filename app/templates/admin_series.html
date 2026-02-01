@@ -52,7 +52,7 @@
             <textarea class="input" name="summary" rows="3" placeholder="Short description">{{ meta.summary or '' }}</textarea>
           </label>
           <label class="stack">
-            <span class="muted">Poster image</span>
+            <span class="muted">Poster image (recommended 2:3, e.g., 1000×1500)</span>
             <input class="input" type="file" name="poster" accept=".jpg,.jpeg,.png,.webp" />
           </label>
           {% if meta.poster %}
@@ -65,7 +65,7 @@
             </div>
           {% endif %}
           <label class="stack">
-            <span class="muted">Logo image</span>
+            <span class="muted">Logo image (transparent PNG preferred, ~600×200)</span>
             <input class="input" type="file" name="logo" accept=".jpg,.jpeg,.png,.webp,.svg" />
           </label>
           {% if meta.logo %}

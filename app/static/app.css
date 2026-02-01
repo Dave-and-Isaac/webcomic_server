@@ -450,10 +450,13 @@ a:hover {
 }
 
 .series-logo {
+  width: auto;
+  height: auto;
   max-width: 320px;
   max-height: 120px;
   display: block;
   margin-bottom: 8px;
+  object-fit: contain;
 }
 
 .series-website {
