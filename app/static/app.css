@@ -195,6 +195,7 @@ body {
   flex: 1;
   min-width: 0;
   padding-bottom: var(--footer-space);
+  overflow-x: auto;
 }
 
 body.sidebar-collapsed .sidebar {
@@ -661,6 +662,7 @@ hr.sep {
   max-width: min(var(--max), 1100px);
   margin: 0 auto;
   padding: 12px 16px calc(40px + var(--footer-space));
+  overflow-x: visible;
 }
 
 .reader-head {
@@ -669,6 +671,11 @@ hr.sep {
   justify-content: space-between;
   gap: 14px;
   margin: 14px 0;
+  position: sticky;
+  top: 64px;
+  z-index: 8;
+  background: var(--bg);
+  padding: 8px 0;
 }
 
 .reader-controls {
@@ -697,6 +704,7 @@ hr.sep {
   background: rgba(0, 0, 0, .25);
   box-shadow: var(--shadow);
   overflow: visible;
+  width: 100%;
 }
 
 .reader-image-wrap img {
@@ -704,7 +712,7 @@ hr.sep {
   max-width: none;
   height: auto;
   display: block;
-  border-radius: 10px;
+  border-radius: 0;
 }
 
 .image-nav {
@@ -712,6 +720,23 @@ hr.sep {
   display: flex;
   justify-content: center;
   width: 100%;
+}
+
+/* Center the zooming reader pane so scaling expands left/right evenly. */
+.reader-pane {
+  width: fit-content;
+  max-width: none;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.page-image {
+  border-radius: 0;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  transform-origin: 50% 0%;
 }
 
 .pdf-spread {
@@ -739,12 +764,37 @@ hr.sep {
 .nav-zone.right { right: 0; }
 
 .reader-foot {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   margin-top: 20px;
   margin-bottom: 24px;
   padding-bottom: calc(var(--footer-space) * 0.35);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.reader-nav {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.reader-meta-left,
+.reader-meta-right {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.reader-meta-left {
+  justify-self: start;
+}
+
+.reader-meta-right {
+  justify-self: end;
+  text-align: right;
 }
 
 .kbd {

@@ -1,4 +1,5 @@
 import mimetypes
+import re
 import os
 import time
 from pathlib import Path, PurePosixPath
@@ -802,6 +803,15 @@ def reader(request: Request, comic_slug: str, year_slug: str, page: int):
 
     idx0 = page - 1
     filename = f"Page {page}" if is_pdf else images[idx0]
+    page_date = None
+    page_title = None
+    if not is_pdf and filename:
+        base_name = Path(filename).name
+        m = re.match(r"^(\d{8})\s*[-–—]\s*(.+)\.(?:[A-Za-z0-9]+)$", base_name)
+        if m:
+            raw = m.group(1)
+            page_date = f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}"
+            page_title = m.group(2).strip()
     view_mode = request.query_params.get("view", "single")
     if view_mode not in {"single", "spread"}:
         view_mode = "single"
@@ -819,6 +829,12 @@ def reader(request: Request, comic_slug: str, year_slug: str, page: int):
         image_url = f"/asset/{comic_slug}/{year_slug}/{filename}"
 
     view_qs = f"?view={view_mode}" if is_pdf else ""
+    first_url = f"/read/{comic_slug}/{year_slug}/1{view_qs}" if page > 1 else None
+    last_url = (
+        f"/read/{comic_slug}/{year_slug}/{page_count}{view_qs}"
+        if (pdf_page_count_unknown or page < page_count)
+        else None
+    )
     prev_url = f"/read/{comic_slug}/{year_slug}/{page - 1}{view_qs}" if page > 1 else None
     next_url = (
         f"/read/{comic_slug}/{year_slug}/{page + 1}{view_qs}"
@@ -841,11 +857,15 @@ def reader(request: Request, comic_slug: str, year_slug: str, page: int):
             "image_url": image_url,
             "second_image_url": second_image_url,
             "page_filename": (f"Page {page}" if is_pdf else filename),
+            "page_date": page_date,
+            "page_title": page_title,
             "is_pdf": is_pdf,
             "pdf_url": pdf_url,
             "view_mode": view_mode,
             "second_page": second_page,
             "pdf_page_count_unknown": pdf_page_count_unknown,
+            "first_url": first_url,
+            "last_url": last_url,
             "prev_url": prev_url,
             "next_url": next_url,
         },

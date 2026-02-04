@@ -29,7 +29,6 @@
         <div class="reader-title">
           <strong>{{ year.title }}</strong>
           <div class="muted">
-            {% if page_filename %}File: <span class="code">{{ page_filename }}</span>{% endif %}
             • Keyboard: <span class="kbd">←</span> <span class="kbd">→</span> <span class="kbd">Space</span>
             • Tip: click left/right sides to navigate
           </div>
@@ -46,40 +45,58 @@
         </div>
       </div>
 
-      <div class="reader-image-wrap">
-        {% if image_url %}
-          <div class="image-nav">
-            {% if prev_url %}
-              <a class="nav-zone left" href="{{ prev_url }}" rel="prev" aria-label="Previous page"></a>
-            {% endif %}
-            {% if next_url %}
-              <a class="nav-zone right" href="{{ next_url }}" rel="next" aria-label="Next page"></a>
-            {% endif %}
-            {% if second_image_url %}
-              <div class="pdf-spread">
-                <img class="page-image" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
-                <img class="page-image" src="{{ second_image_url }}" alt="Page {{ second_page }}" />
-              </div>
-            {% else %}
-              <img id="pageImage" class="page-image" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
+      <div class="reader-pane">
+        <div class="reader-image-wrap">
+          {% if image_url %}
+            <div class="image-nav">
+              {% if prev_url %}
+                <a class="nav-zone left" href="{{ prev_url }}" rel="prev" aria-label="Previous page"></a>
+              {% endif %}
+              {% if next_url %}
+                <a class="nav-zone right" href="{{ next_url }}" rel="next" aria-label="Next page"></a>
+              {% endif %}
+              {% if second_image_url %}
+                <div class="pdf-spread">
+                  <img class="page-image" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
+                  <img class="page-image" src="{{ second_image_url }}" alt="Page {{ second_page }}" />
+                </div>
+              {% else %}
+                <img id="pageImage" class="page-image" src="{{ image_url }}" alt="{{ page_filename if page_filename else 'Page ' ~ page }}" />
+              {% endif %}
+            </div>
+          {% else %}
+            <div style="padding:24px;" class="muted">No images found in this year.</div>
+          {% endif %}
+        </div>
+
+        <div class="reader-foot">
+          <div class="reader-meta-left">
+            {% if page_date %}
+              <strong>Date:</strong> {{ page_date }}
             {% endif %}
           </div>
-        {% else %}
-          <div style="padding:24px;" class="muted">No images found in this year.</div>
-        {% endif %}
-      </div>
-
-      <div class="reader-foot">
-        {% if prev_url %}
-          <a class="btn" href="{{ prev_url }}" rel="prev">Prev</a>
-        {% else %}
-          <span class="btn disabled">Prev</span>
-        {% endif %}
-        {% if next_url %}
-          <a class="btn" href="{{ next_url }}" rel="next">Next</a>
-        {% else %}
-          <span class="btn disabled">Next</span>
-        {% endif %}
+          <div class="reader-nav">
+            <a class="btn{% if not first_url %} disabled{% endif %}" href="{{ first_url if first_url else '#' }}">First</a>
+            {% if prev_url %}
+              <a class="btn" href="{{ prev_url }}" rel="prev">Prev</a>
+            {% else %}
+              <span class="btn disabled">Prev</span>
+            {% endif %}
+            {% if next_url %}
+              <a class="btn" href="{{ next_url }}" rel="next">Next</a>
+            {% else %}
+              <span class="btn disabled">Next</span>
+            {% endif %}
+            <a class="btn{% if not last_url %} disabled{% endif %}" href="{{ last_url if last_url else '#' }}">Last</a>
+          </div>
+          <div class="reader-meta-right">
+            {% if page_title %}
+              <strong>Title:</strong> {{ page_title }}
+            {% elif page_filename %}
+              <strong>File:</strong> {{ page_filename }}
+            {% endif %}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -124,9 +141,38 @@
           if (!img.complete || !img.naturalWidth) return;
           img.style.width = '';
           img.style.height = '';
+          img.style.transformOrigin = '50% 0%';
+          img.style.transform = '';
           img.style.width = (img.naturalWidth * zoom) + 'px';
-          img.style.height = 'auto';
+          img.style.height = (img.naturalHeight * zoom) + 'px';
         });
+
+        const wrap = document.querySelector('.reader-image-wrap');
+        const pane = document.querySelector('.reader-pane');
+        const foot = document.querySelector('.reader-foot');
+        if (wrap && pane) {
+          const gap = parseFloat(getComputedStyle(document.querySelector('.pdf-spread') || wrap).columnGap || 0);
+          let totalWidth = 0;
+          let maxHeight = 0;
+          imgs.forEach((img, idx) => {
+            if (!img.complete || !img.naturalWidth) return;
+            totalWidth += img.naturalWidth * zoom;
+            if (idx > 0) totalWidth += gap;
+            maxHeight = Math.max(maxHeight, img.naturalHeight * zoom);
+          });
+          if (totalWidth > 0) {
+            pane.style.width = totalWidth + 'px';
+            wrap.style.width = totalWidth + 'px';
+            wrap.style.height = maxHeight + 'px';
+            if (foot) foot.style.width = totalWidth + 'px';
+            const appContent = document.querySelector('.app-content');
+            if (appContent) {
+              requestAnimationFrame(() => {
+                appContent.scrollLeft = Math.max(0, (pane.offsetWidth - appContent.clientWidth) / 2);
+              });
+            }
+          }
+        }
       }
 
       setZoom(getZoom());
