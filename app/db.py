@@ -46,6 +46,7 @@ def init_db() -> None:
               title TEXT NOT NULL,
               path TEXT NOT NULL,
               sort_index INTEGER NOT NULL DEFAULT 0,
+              page_count INTEGER NOT NULL DEFAULT 0,
               UNIQUE(comic_id, slug),
               FOREIGN KEY (comic_id) REFERENCES comic(id) ON DELETE CASCADE
             );
@@ -92,6 +93,7 @@ def init_db() -> None:
         ensure_user_keyboard_column(conn)
         ensure_user_default_view_column(conn)
         ensure_user_avatar_column(conn)
+        ensure_chapter_page_count_column(conn)
 
 
 def ensure_user_theme_column(conn: sqlite3.Connection) -> None:
@@ -121,6 +123,12 @@ def ensure_user_avatar_column(conn: sqlite3.Connection) -> None:
     cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
     if "avatar" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN avatar TEXT")
+
+
+def ensure_chapter_page_count_column(conn: sqlite3.Connection) -> None:
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(chapter)").fetchall()]
+    if "page_count" not in cols:
+        conn.execute("ALTER TABLE chapter ADD COLUMN page_count INTEGER NOT NULL DEFAULT 0")
 
 
 def get_setting(key: str) -> str | None:

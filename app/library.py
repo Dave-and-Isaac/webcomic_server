@@ -43,6 +43,7 @@ class Year:
     title: str
     path: str
     sort_index: int
+    page_count: int
 
 
 def slugify(s: str) -> str:
@@ -211,7 +212,7 @@ def scan_comics(comics_root: Path) -> None:
                 comic_id = int(cur.lastrowid)
 
             year_entries = detect_year_entries(comic_dir)
-            years_to_upsert: list[tuple[str, str, str, int]] = []
+            years_to_upsert: list[tuple[str, str, str, int, int]] = []
             for idx, year_entry in enumerate(year_entries):
                 if year_entry.is_dir():
                     title = year_entry.name
@@ -219,10 +220,11 @@ def scan_comics(comics_root: Path) -> None:
                 else:
                     title = year_entry.stem
                     slug = slugify(year_entry.name)
-                years_to_upsert.append((slug, title, str(year_entry), idx))
+                page_count = len(get_year_images(str(year_entry)))
+                years_to_upsert.append((slug, title, str(year_entry), idx, page_count))
 
             # Delete years that no longer exist on disk
-            desired_slugs = [slug for (slug, _title, _path, _idx) in years_to_upsert]
+            desired_slugs = [slug for (slug, _title, _path, _idx, _count) in years_to_upsert]
 
             if desired_slugs:
                 placeholders = ",".join(["?"] * len(desired_slugs))
@@ -241,7 +243,7 @@ def scan_comics(comics_root: Path) -> None:
                 )
 
             # Upsert years, keep it simple: insert if missing, update if exists.
-            for slug, title, path, sort_idx in years_to_upsert:
+            for slug, title, path, sort_idx, page_count in years_to_upsert:
                 row = conn.execute(
                     "SELECT id FROM chapter WHERE comic_id=? AND slug=?",
                     (comic_id, slug),
@@ -249,13 +251,13 @@ def scan_comics(comics_root: Path) -> None:
                 if row:
                     year_id = int(row["id"])
                     conn.execute(
-                        "UPDATE chapter SET title=?, path=?, sort_index=? WHERE id=?",
-                        (title, path, sort_idx, year_id),
+                        "UPDATE chapter SET title=?, path=?, sort_index=?, page_count=? WHERE id=?",
+                        (title, path, sort_idx, page_count, year_id),
                     )
                 else:
                     conn.execute(
-                        "INSERT INTO chapter(comic_id, slug, title, path, sort_index) VALUES(?,?,?,?,?)",
-                        (comic_id, slug, title, path, sort_idx),
+                        "INSERT INTO chapter(comic_id, slug, title, path, sort_index, page_count) VALUES(?,?,?,?,?,?)",
+                        (comic_id, slug, title, path, sort_idx, page_count),
                     )
 
 
@@ -279,21 +281,32 @@ def get_years_for_comic(comic_id: int) -> list[Year]:
     with db() as conn:
         rows = conn.execute(
             """
-            SELECT id, comic_id, slug, title, path, sort_index
+            SELECT id, comic_id, slug, title, path, sort_index, page_count
             FROM chapter
             WHERE comic_id=?
             ORDER BY sort_index ASC, title COLLATE NOCASE ASC
             """,
             (comic_id,),
         ).fetchall()
-        return [Year(int(r["id"]), int(r["comic_id"]), r["slug"], r["title"], r["path"], int(r["sort_index"])) for r in rows]
+        return [
+            Year(
+                int(r["id"]),
+                int(r["comic_id"]),
+                r["slug"],
+                r["title"],
+                r["path"],
+                int(r["sort_index"]),
+                int(r["page_count"]),
+            )
+            for r in rows
+        ]
 
 
 def get_year_by_slugs(comic_id: int, year_slug: str) -> Year | None:
     with db() as conn:
         r = conn.execute(
             """
-            SELECT id, comic_id, slug, title, path, sort_index
+            SELECT id, comic_id, slug, title, path, sort_index, page_count
             FROM chapter
             WHERE comic_id=? AND slug=?
             """,
@@ -308,6 +321,7 @@ def get_year_by_slugs(comic_id: int, year_slug: str) -> Year | None:
             r["title"],
             r["path"],
             int(r["sort_index"]),
+            int(r["page_count"]),
         )
 
 

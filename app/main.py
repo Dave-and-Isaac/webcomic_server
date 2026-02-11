@@ -313,14 +313,13 @@ def library(request: Request, error: str | None = None, success: str | None = No
         poster_url = f"/config/posters/{poster}?v={poster_version}" if poster else None
         years = get_years_for_comic(c.id)
         year_count = len(years)
-        total_images = 0
-        for year in years:
-            total_images += len(get_year_images(year.path))
+        total_images = sum(year.page_count for year in years)
         progress_pct = None
         if lr:
-            year = get_year_by_slugs(c.id, lr["year_slug"])
+            years_by_slug = {year.slug: year for year in years}
+            year = years_by_slug.get(lr["year_slug"])
             if year:
-                year_pages = max(1, len(get_year_images(year.path)))
+                year_pages = max(1, year.page_count)
                 progress_pct = int(((lr["page_index"] + 1) / year_pages) * 100)
         comics_rows.append(
             {
@@ -456,8 +455,7 @@ def admin_panel(
     for comic in comics:
         years = get_years_for_comic(comic.id)
         years_count += len(years)
-        for year in years:
-            images_count += len(get_year_images(year.path))
+        images_count += sum(year.page_count for year in years)
     users = list_users()
     scan_last_started = get_setting("scan_last_started")
     scan_last_completed = get_setting("scan_last_completed")
