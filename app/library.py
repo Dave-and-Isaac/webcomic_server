@@ -1,7 +1,9 @@
 import os
 import re
+import shutil
 import zipfile
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 from typing import Iterable
 
@@ -21,6 +23,26 @@ except Exception:  # pragma: no cover - optional dependency
     PdfReader = None
 
 from .db import db
+
+logger = logging.getLogger(__name__)
+
+if rarfile is not None:
+    # Prefer tools with better support for modern RAR/CBR variants.
+    _rar_tool = None
+    for candidate in ("unar", "unrar", "7zz", "7z", "bsdtar"):
+        if shutil.which(candidate):
+            _rar_tool = candidate
+            break
+    if _rar_tool == "unar":
+        rarfile.UNAR_TOOL = "unar"
+    elif _rar_tool == "unrar":
+        rarfile.UNRAR_TOOL = "unrar"
+    elif _rar_tool in {"7zz", "7z"}:
+        rarfile.SEVENZIP_TOOL = _rar_tool
+    elif _rar_tool == "bsdtar":
+        rarfile.BSDTAR_TOOL = "bsdtar"
+    else:
+        logger.warning("No RAR extraction backend found on PATH; .cbr files may fail")
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 ARCHIVE_EXTS = {".cbz", ".cbr", ".zip"}
@@ -94,7 +116,8 @@ def list_images_in_archive(archive_path: Path) -> list[str]:
                 ]
         else:
             names = []
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to list archive images from %s: %s", archive_path, exc)
         names = []
     return sorted(names, key=lambda n: n.lower())
 
@@ -108,7 +131,10 @@ def read_archive_image(archive_path: Path, filename: str) -> bytes | None:
         if suffix == ".cbr" and rarfile is not None:
             with rarfile.RarFile(archive_path) as rf:
                 return rf.read(filename)
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "Failed to read archive image %s from %s: %s", filename, archive_path, exc
+        )
         return None
     return None
 

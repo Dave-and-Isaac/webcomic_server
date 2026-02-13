@@ -107,7 +107,7 @@ GET /health
 ## Notes
 
 - Admin default login: username `admin`, password `admin`. You’ll be prompted to change it.
-- `.cbr` support requires `unrar` (included in the Docker image).
+- `.cbr` support requires a RAR extractor backend (`unar`/`unrar`). The Docker image includes both.
 
 ## License
 
