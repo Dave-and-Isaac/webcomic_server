@@ -1,5 +1,5 @@
 name: Publish Docker image
-run-name: Publish Docker image ${{ inputs.version != '' && format('{0}', inputs.version) || '(from VERSION file)' }}
+run-name: Publish Docker image ${{ github.event.inputs.version || '(from VERSION file)' }}
 
 on:
   workflow_dispatch:
