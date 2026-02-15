@@ -2,7 +2,9 @@ import mimetypes
 import re
 import os
 import time
+import logging
 from pathlib import Path, PurePosixPath
+from urllib.parse import quote_plus
 
 from fastapi import FastAPI, Request, HTTPException, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
@@ -68,6 +70,7 @@ else:
     APP_VERSION = "dev"
 
 app = FastAPI(title="StripStash")
+logger = logging.getLogger(__name__)
 
 app.mount("/static", StaticFiles(directory=str(APP_ROOT / "static")), name="static")
 
@@ -116,13 +119,22 @@ def _render(request: Request, template_name: str, context: dict):
     return TEMPLATES.TemplateResponse(template_name, context)
 
 
-def _scan_and_record(comics_dir: Path) -> None:
+def _scan_and_record(comics_dir: Path) -> tuple[bool, str | None]:
     start = time.perf_counter()
     set_setting("scan_last_started", str(time.time()))
-    scan_comics(comics_dir)
+    try:
+        scan_comics(comics_dir)
+    except Exception as exc:
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        set_setting("scan_duration_ms", str(duration_ms))
+        set_setting("scan_last_error", str(exc))
+        logger.exception("Scan failed for comics_dir=%s", comics_dir)
+        return (False, str(exc))
     duration_ms = int((time.perf_counter() - start) * 1000)
     set_setting("scan_last_completed", str(time.time()))
     set_setting("scan_duration_ms", str(duration_ms))
+    delete_setting("scan_last_error")
+    return (True, None)
 
 
 @app.middleware("http")
@@ -413,8 +425,10 @@ def update_comics_dir(request: Request, comics_dir: str = Form(...)):
     else:
         delete_setting(COMICS_SETTING_KEY)
     active_dir, _source = _get_active_comics_dir()
-    _scan_and_record(active_dir)
-    return RedirectResponse(url="/admin", status_code=303)
+    ok, err = _scan_and_record(active_dir)
+    if ok:
+        return RedirectResponse(url="/admin?success=Comics+directory+updated", status_code=303)
+    return RedirectResponse(url=f"/admin?error={quote_plus(f'Rescan failed: {err}')}", status_code=303)
 
 
 @app.post("/settings/comics-dir/reset")
@@ -424,15 +438,19 @@ def reset_comics_dir(request: Request):
         raise HTTPException(status_code=403, detail="Admin only")
     delete_setting(COMICS_SETTING_KEY)
     active_dir, _source = _get_active_comics_dir()
-    _scan_and_record(active_dir)
-    return RedirectResponse(url="/admin", status_code=303)
+    ok, err = _scan_and_record(active_dir)
+    if ok:
+        return RedirectResponse(url="/admin?success=Using+default+or+env+comics+directory", status_code=303)
+    return RedirectResponse(url=f"/admin?error={quote_plus(f'Rescan failed: {err}')}", status_code=303)
 
 
 @app.post("/rescan")
 def rescan():
     comics_dir, _source = _get_active_comics_dir()
-    _scan_and_record(comics_dir)
-    return RedirectResponse(url="/series", status_code=303)
+    ok, err = _scan_and_record(comics_dir)
+    if ok:
+        return RedirectResponse(url="/series?success=Rescan+completed", status_code=303)
+    return RedirectResponse(url=f"/series?error={quote_plus(f'Rescan failed: {err}')}", status_code=303)
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -460,6 +478,7 @@ def admin_panel(
     scan_last_started = get_setting("scan_last_started")
     scan_last_completed = get_setting("scan_last_completed")
     scan_duration_ms = get_setting("scan_duration_ms")
+    scan_last_error = get_setting("scan_last_error")
 
     return _render(
         request,
@@ -481,6 +500,7 @@ def admin_panel(
                 "last_started": scan_last_started,
                 "last_completed": scan_last_completed,
                 "duration_ms": scan_duration_ms,
+                "last_error": scan_last_error,
             },
             "series_cfg": series_cfg,
             "error": error,

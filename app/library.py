@@ -92,7 +92,11 @@ def is_pdf_file(p: Path) -> bool:
 
 
 def list_images_in_dir(dir_path: Path) -> list[Path]:
-    imgs = [p for p in dir_path.iterdir() if is_image_file(p)]
+    try:
+        imgs = [p for p in dir_path.iterdir() if is_image_file(p)]
+    except Exception as exc:
+        logger.warning("Failed to list images in directory %s: %s", dir_path, exc)
+        return []
     # Sort in a predictable way (supports 001.jpg, 1.jpg, etc.)
     return sorted(imgs, key=lambda p: p.name.lower())
 
@@ -181,12 +185,26 @@ def render_pdf_page(pdf_path: Path, page: int, dpi: int) -> bytes | None:
 def detect_year_entries(comic_dir: Path) -> list[Path]:
     """Collect year folders that contain images and archive files in the series root."""
     year_entries: list[Path] = []
-    for child in comic_dir.iterdir():
-        if child.is_dir():
-            if any(is_image_file(p) for p in child.iterdir()):
+    try:
+        children = list(comic_dir.iterdir())
+    except Exception as exc:
+        logger.warning("Failed to read comic directory %s: %s", comic_dir, exc)
+        return []
+
+    for child in children:
+        try:
+            if child.is_dir():
+                try:
+                    has_images = any(is_image_file(p) for p in child.iterdir())
+                except Exception as exc:
+                    logger.warning("Failed to inspect child directory %s: %s", child, exc)
+                    has_images = False
+                if has_images:
+                    year_entries.append(child)
+            elif is_archive_file(child) or is_pdf_file(child):
                 year_entries.append(child)
-        elif is_archive_file(child) or is_pdf_file(child):
-            year_entries.append(child)
+        except Exception as exc:
+            logger.warning("Failed to inspect entry %s: %s", child, exc)
     return sorted(year_entries, key=lambda p: p.name.lower())
 
 
@@ -200,7 +218,11 @@ def scan_comics(comics_root: Path) -> None:
     comics_root = comics_root.resolve()
     comics_root.mkdir(parents=True, exist_ok=True)
 
-    comic_dirs = [p for p in comics_root.iterdir() if p.is_dir()]
+    try:
+        comic_dirs = [p for p in comics_root.iterdir() if p.is_dir()]
+    except Exception as exc:
+        logger.warning("Failed to read comics root %s: %s", comics_root, exc)
+        comic_dirs = []
     comic_dirs.sort(key=lambda p: p.name.lower())
 
     desired_comic_slugs = []
@@ -353,13 +375,16 @@ def get_year_by_slugs(comic_id: int, year_slug: str) -> Year | None:
 
 def get_year_images(year_path: str) -> list[str]:
     p = Path(year_path)
-    if not p.exists():
-        return []
-    if p.is_dir():
-        return [img.name for img in list_images_in_dir(p)]
-    if is_archive_file(p):
-        return list_images_in_archive(p)
-    if is_pdf_file(p):
-        page_count = get_pdf_page_count(p)
-        return [str(i + 1) for i in range(page_count)]
+    try:
+        if not p.exists():
+            return []
+        if p.is_dir():
+            return [img.name for img in list_images_in_dir(p)]
+        if is_archive_file(p):
+            return list_images_in_archive(p)
+        if is_pdf_file(p):
+            page_count = get_pdf_page_count(p)
+            return [str(i + 1) for i in range(page_count)]
+    except Exception as exc:
+        logger.warning("Failed to get year images for %s: %s", p, exc)
     return []

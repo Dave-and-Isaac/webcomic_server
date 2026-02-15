@@ -114,6 +114,9 @@
             <div class="muted">Last started: <span class="code">{{ scan.last_started or '—' }}</span></div>
             <div class="muted">Last completed: <span class="code">{{ scan.last_completed or '—' }}</span></div>
             <div class="muted">Duration: <span class="code">{{ scan.duration_ms or '—' }} ms</span></div>
+            {% if scan.last_error %}
+              <div class="muted" style="margin-top:6px;">Last error: <span class="code">{{ scan.last_error }}</span></div>
+            {% endif %}
             <form method="post" action="/rescan" class="row" style="margin-top:10px;">
               <button class="btn" type="submit">Rescan Now</button>
             </form>
