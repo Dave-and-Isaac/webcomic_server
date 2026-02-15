@@ -51,6 +51,10 @@
             <span class="muted">Summary</span>
             <textarea class="input" name="summary" rows="3" placeholder="Short description">{{ meta.summary or '' }}</textarea>
           </label>
+          <label class="row" style="gap:8px;">
+            <input type="checkbox" name="adult_content" value="1" {% if meta.adult %}checked{% endif %} />
+            <span class="muted">Contains adult content</span>
+          </label>
           <label class="stack">
             <span class="muted">Poster image (recommended 2:3, e.g., 1000×1500)</span>
             <input class="input" type="file" name="poster" accept=".jpg,.jpeg,.png,.webp" />

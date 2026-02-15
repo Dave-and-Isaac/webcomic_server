@@ -17,6 +17,7 @@ class User:
     password_hash: str
     is_admin: bool
     must_change_password: bool
+    allow_adult_content: bool
     theme: str
     keyboard_enabled: bool
     default_view: str
@@ -71,7 +72,7 @@ def get_user_by_username(username: str) -> User | None:
     with db() as conn:
         row = conn.execute(
             """
-            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar
+            SELECT id, username, password_hash, is_admin, must_change_password, allow_adult_content, theme, keyboard_enabled, default_view, avatar
             FROM users
             WHERE username=?
             """,
@@ -85,6 +86,7 @@ def get_user_by_username(username: str) -> User | None:
             row["password_hash"],
             bool(row["is_admin"]),
             bool(row["must_change_password"]),
+            bool(row["allow_adult_content"]),
             row["theme"],
             bool(row["keyboard_enabled"]),
             row["default_view"],
@@ -96,7 +98,7 @@ def get_user_by_id(user_id: int) -> User | None:
     with db() as conn:
         row = conn.execute(
             """
-            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar
+            SELECT id, username, password_hash, is_admin, must_change_password, allow_adult_content, theme, keyboard_enabled, default_view, avatar
             FROM users
             WHERE id=?
             """,
@@ -110,6 +112,7 @@ def get_user_by_id(user_id: int) -> User | None:
             row["password_hash"],
             bool(row["is_admin"]),
             bool(row["must_change_password"]),
+            bool(row["allow_adult_content"]),
             row["theme"],
             bool(row["keyboard_enabled"]),
             row["default_view"],
@@ -121,8 +124,8 @@ def create_user(username: str, password: str, is_admin: bool) -> User:
     with db() as conn:
         cur = conn.execute(
             """
-            INSERT INTO users(username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar)
-            VALUES (?, ?, ?, 1, 'system', 1, 'read', NULL)
+            INSERT INTO users(username, password_hash, is_admin, must_change_password, allow_adult_content, theme, keyboard_enabled, default_view, avatar)
+            VALUES (?, ?, ?, 1, 1, 'system', 1, 'read', NULL)
             """,
             (username, hash_password(password), 1 if is_admin else 0),
         )
@@ -134,7 +137,7 @@ def list_users() -> Iterable[User]:
     with db() as conn:
         rows = conn.execute(
             """
-            SELECT id, username, password_hash, is_admin, must_change_password, theme, keyboard_enabled, default_view, avatar
+            SELECT id, username, password_hash, is_admin, must_change_password, allow_adult_content, theme, keyboard_enabled, default_view, avatar
             FROM users
             ORDER BY username COLLATE NOCASE
             """
@@ -146,6 +149,7 @@ def list_users() -> Iterable[User]:
                 r["password_hash"],
                 bool(r["is_admin"]),
                 bool(r["must_change_password"]),
+                bool(r["allow_adult_content"]),
                 r["theme"],
                 bool(r["keyboard_enabled"]),
                 r["default_view"],
@@ -199,6 +203,14 @@ def update_avatar(user_id: int, avatar: str | None) -> None:
         )
 
 
+def update_user_adult_access(user_id: int, allow_adult_content: bool) -> None:
+    with db() as conn:
+        conn.execute(
+            "UPDATE users SET allow_adult_content=? WHERE id=?",
+            (1 if allow_adult_content else 0, user_id),
+        )
+
+
 def create_session(user_id: int) -> str:
     token = secrets.token_urlsafe(32)
     with db() as conn:
@@ -218,7 +230,7 @@ def get_user_by_session(token: str) -> User | None:
     with db() as conn:
         row = conn.execute(
             """
-            SELECT u.id, u.username, u.password_hash, u.is_admin, u.must_change_password, u.theme, keyboard_enabled, default_view, avatar
+            SELECT u.id, u.username, u.password_hash, u.is_admin, u.must_change_password, u.allow_adult_content, u.theme, keyboard_enabled, default_view, avatar
             FROM sessions s
             JOIN users u ON u.id = s.user_id
             WHERE s.token=?
@@ -237,6 +249,7 @@ def get_user_by_session(token: str) -> User | None:
             row["password_hash"],
             bool(row["is_admin"]),
             bool(row["must_change_password"]),
+            bool(row["allow_adult_content"]),
             row["theme"],
             bool(row["keyboard_enabled"]),
             row["default_view"],

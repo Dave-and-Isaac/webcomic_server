@@ -26,6 +26,7 @@ from .db import (
 )
 from .auth import (
     ensure_admin_user,
+    get_user_by_id,
     get_user_by_session,
     get_user_by_username,
     create_session,
@@ -38,6 +39,7 @@ from .auth import (
     update_reader_prefs,
     update_username,
     update_avatar,
+    update_user_adult_access,
 )
 from .config import ensure_config, load_series_config, save_series_config, POSTERS_DIR, LOGOS_DIR, AVATARS_DIR
 
@@ -135,6 +137,25 @@ def _scan_and_record(comics_dir: Path) -> tuple[bool, str | None]:
     set_setting("scan_duration_ms", str(duration_ms))
     delete_setting("scan_last_error")
     return (True, None)
+
+
+def _series_meta(series_cfg: dict, comic_slug: str) -> dict:
+    if not isinstance(series_cfg, dict):
+        return {}
+    meta = series_cfg.get(comic_slug, {})
+    return meta if isinstance(meta, dict) else {}
+
+
+def _is_adult_series(series_cfg: dict, comic_slug: str) -> bool:
+    return bool(_series_meta(series_cfg, comic_slug).get("adult", False))
+
+
+def _user_can_view_comic(user, series_cfg: dict, comic_slug: str) -> bool:
+    if user is None:
+        return False
+    if bool(user.allow_adult_content):
+        return True
+    return not _is_adult_series(series_cfg, comic_slug)
 
 
 @app.middleware("http")
@@ -310,6 +331,7 @@ def profile_remove_avatar(request: Request):
 
 @app.get("/series", response_class=HTMLResponse)
 def library(request: Request, error: str | None = None, success: str | None = None):
+    user = request.state.user
     comics = get_comics()
     last_reads = get_last_read_all_comics()
     series_cfg = load_series_config()
@@ -317,8 +339,10 @@ def library(request: Request, error: str | None = None, success: str | None = No
     # attach last_read per comic for template convenience
     comics_rows = []
     for c in comics:
+        if not _user_can_view_comic(user, series_cfg, c.slug):
+            continue
         lr = last_reads.get(c.id)
-        meta = series_cfg.get(c.slug, {}) if isinstance(series_cfg, dict) else {}
+        meta = _series_meta(series_cfg, c.slug)
         display_title = meta.get("title") or c.title
         poster = meta.get("poster")
         poster_version = meta.get("poster_updated") if isinstance(meta, dict) else None
@@ -361,19 +385,22 @@ def library(request: Request, error: str | None = None, success: str | None = No
 @app.get("/", response_class=HTMLResponse)
 @app.get("/home", response_class=HTMLResponse)
 def home(request: Request):
+    user = request.state.user
     comics = get_comics()
     last_reads = get_last_read_all_comics()
     series_cfg = load_series_config()
 
     continue_items = []
     for c in comics:
+        if not _user_can_view_comic(user, series_cfg, c.slug):
+            continue
         lr = last_reads.get(c.id)
         if not lr:
             continue
         year = get_year_by_slugs(c.id, lr["year_slug"])
         if not year:
             continue
-        meta = series_cfg.get(c.slug, {}) if isinstance(series_cfg, dict) else {}
+        meta = _series_meta(series_cfg, c.slug)
         display_title = meta.get("title") or c.title
         poster = meta.get("poster")
         poster_version = meta.get("poster_updated") if isinstance(meta, dict) else None
@@ -539,7 +566,7 @@ def admin_series_edit(request: Request, comic_slug: str, error: str | None = Non
     if not comic:
         raise HTTPException(status_code=404, detail="Comic not found")
     series_cfg = load_series_config()
-    meta = series_cfg.get(comic.slug, {}) if isinstance(series_cfg, dict) else {}
+    meta = _series_meta(series_cfg, comic.slug)
     return _render(
         request,
         "admin_series.html",
@@ -561,6 +588,7 @@ def admin_series_update(
     year_range: str = Form(""),
     summary: str = Form(""),
     website: str = Form(""),
+    adult_content: str | None = Form(None),
     remove_poster: str | None = Form(None),
     remove_logo: str | None = Form(None),
     poster: UploadFile | None = File(None),
@@ -602,6 +630,11 @@ def admin_series_update(
         meta["website"] = cleaned_website
     else:
         meta.pop("website", None)
+
+    if adult_content:
+        meta["adult"] = True
+    else:
+        meta.pop("adult", None)
 
     if remove_poster:
         meta.pop("poster", None)
@@ -647,6 +680,18 @@ def admin_series_update(
     return RedirectResponse(url=f"/admin/series/{comic.slug}?success=Series+updated", status_code=303)
 
 
+@app.post("/admin/users/{user_id}/adult-access")
+def admin_update_user_adult_access(request: Request, user_id: int, allow_adult_content: str | None = Form(None)):
+    user = request.state.user
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    target = get_user_by_id(user_id)
+    if not target:
+        return RedirectResponse(url="/admin?section=users&error=User+not+found", status_code=303)
+    update_user_adult_access(user_id, bool(allow_adult_content))
+    return RedirectResponse(url="/admin?section=users&success=User+restrictions+updated", status_code=303)
+
+
 @app.post("/admin/change-password")
 def admin_change_password(
     request: Request,
@@ -674,9 +719,12 @@ def comic_page(request: Request, comic_slug: str, order: str = "asc"):
     if not comic:
         raise HTTPException(status_code=404, detail="Comic not found")
 
-    years = get_years_for_comic(comic.id)
     series_cfg = load_series_config()
-    meta = series_cfg.get(comic.slug, {}) if isinstance(series_cfg, dict) else {}
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
+        raise HTTPException(status_code=404, detail="Comic not found")
+
+    years = get_years_for_comic(comic.id)
+    meta = _series_meta(series_cfg, comic.slug)
     poster = meta.get("poster")
     logo = meta.get("logo")
     poster_version = meta.get("poster_updated") if isinstance(meta, dict) else None
@@ -715,6 +763,9 @@ def read_resume(request: Request, comic_slug: str, year_slug: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
         raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
+        raise HTTPException(status_code=404, detail="Comic not found")
     year = get_year_by_slugs(comic.id, year_slug)
     if not year:
         raise HTTPException(status_code=404, detail="Year not found")
@@ -728,6 +779,9 @@ def read_resume(request: Request, comic_slug: str, year_slug: str):
 def browse_year(request: Request, comic_slug: str, year_slug: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
     year = get_year_by_slugs(comic.id, year_slug)
     if not year:
@@ -778,6 +832,9 @@ def browse_year(request: Request, comic_slug: str, year_slug: str):
 def reader(request: Request, comic_slug: str, year_slug: str, page: int):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
     year = get_year_by_slugs(comic.id, year_slug)
     if not year:
@@ -891,9 +948,12 @@ def reader(request: Request, comic_slug: str, year_slug: str, page: int):
 
 
 @app.get("/resume/{comic_slug}")
-def resume_comic(comic_slug: str):
+def resume_comic(request: Request, comic_slug: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
 
     lr = get_last_read_for_comic(comic.id)
@@ -908,18 +968,24 @@ def resume_comic(comic_slug: str):
 
 
 @app.post("/restart/{comic_slug}")
-def restart_comic(comic_slug: str):
+def restart_comic(request: Request, comic_slug: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
     delete_progress_for_comic(comic.id)
     return RedirectResponse(url=f"/comic/{comic.slug}", status_code=303)
 
 
 @app.post("/restart/{comic_slug}/{year_slug}")
-def restart_year(comic_slug: str, year_slug: str):
+def restart_year(request: Request, comic_slug: str, year_slug: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
     year = get_year_by_slugs(comic.id, year_slug)
     if not year:
@@ -929,9 +995,12 @@ def restart_year(comic_slug: str, year_slug: str):
 
 
 @app.get("/asset/{comic_slug}/{year_slug}/{filename:path}")
-def asset(comic_slug: str, year_slug: str, filename: str):
+def asset(request: Request, comic_slug: str, year_slug: str, filename: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
     year = get_year_by_slugs(comic.id, year_slug)
     if not year:
@@ -976,9 +1045,12 @@ def poster_asset(filename: str):
 
 
 @app.get("/pdf/{comic_slug}/{year_slug}")
-def pdf_asset(comic_slug: str, year_slug: str):
+def pdf_asset(request: Request, comic_slug: str, year_slug: str):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
     year = get_year_by_slugs(comic.id, year_slug)
     if not year:
@@ -993,9 +1065,12 @@ def pdf_asset(comic_slug: str, year_slug: str):
 
 
 @app.get("/pdf-page/{comic_slug}/{year_slug}/{page}")
-def pdf_page_asset(comic_slug: str, year_slug: str, page: int, dpi: int = 250):
+def pdf_page_asset(request: Request, comic_slug: str, year_slug: str, page: int, dpi: int = 250):
     comic = get_comic_by_slug(comic_slug)
     if not comic:
+        raise HTTPException(status_code=404, detail="Comic not found")
+    series_cfg = load_series_config()
+    if not _user_can_view_comic(request.state.user, series_cfg, comic.slug):
         raise HTTPException(status_code=404, detail="Comic not found")
     year = get_year_by_slugs(comic.id, year_slug)
     if not year:

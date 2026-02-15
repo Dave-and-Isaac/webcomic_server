@@ -63,6 +63,13 @@
                       {% if u.is_admin %}<span class="pill">admin</span>{% endif %}
                       {% if u.must_change_password %}<span class="pill warn">change password</span>{% endif %}
                     </div>
+                    <form method="post" action="/admin/users/{{ u.id }}/adult-access" class="row" style="gap:8px;">
+                      <label class="row" style="gap:6px;">
+                        <input type="checkbox" name="allow_adult_content" value="1" {% if u.allow_adult_content %}checked{% endif %} />
+                        <span class="muted">Allow adult content</span>
+                      </label>
+                      <button class="btn ghost" type="submit">Save</button>
+                    </form>
                   </div>
                 {% endfor %}
               </div>

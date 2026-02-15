@@ -844,6 +844,63 @@ body {
   box-shadow: var(--shadow);
 }
 
+.scan-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 8, 12, .78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 20px;
+}
+
+.scan-dialog {
+  width: min(520px, 94vw);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.scan-dialog h3 {
+  margin: 0 0 8px;
+}
+
+.scan-progress {
+  margin-top: 14px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, .06);
+  overflow: hidden;
+  position: relative;
+}
+
+.scan-progress-indeterminate {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5fb2ff, #9ad0ff);
+  animation: scan-progress-move 1.1s linear infinite;
+}
+
+@keyframes scan-progress-move {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+body.scan-busy {
+  overflow: hidden;
+}
+
 .pill {
   display: inline-block;
   margin-left: 8px;

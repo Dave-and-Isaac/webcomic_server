@@ -1,3 +1,64 @@
 <div class="page-footer">
   <span class="muted">Version {{ app_version }}</span>
 </div>
+
+<div class="scan-overlay" id="scanOverlay" hidden>
+  <div class="scan-dialog">
+    <h3>Scanning library</h3>
+    <div class="muted" id="scanOverlayStatus">Please keep this tab open while rescan is running.</div>
+    <div class="scan-progress" role="progressbar" aria-label="Library rescan in progress">
+      <div class="scan-progress-indeterminate"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const forms = Array.from(document.querySelectorAll("form[action='/rescan']"));
+    if (!forms.length) return;
+
+    const overlay = document.getElementById("scanOverlay");
+    const status = document.getElementById("scanOverlayStatus");
+    let scanning = false;
+
+    function beforeUnload(event) {
+      if (!scanning) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    function setScanning(active) {
+      scanning = active;
+      if (overlay) overlay.hidden = !active;
+      document.body.classList.toggle("scan-busy", active);
+      if (active) {
+        window.addEventListener("beforeunload", beforeUnload);
+      } else {
+        window.removeEventListener("beforeunload", beforeUnload);
+      }
+      forms.forEach((form) => {
+        const button = form.querySelector("button[type='submit']");
+        if (button) button.disabled = active;
+      });
+    }
+
+    forms.forEach((form) => {
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (scanning) return;
+        setScanning(true);
+        if (status) status.textContent = "Please keep this tab open while rescan is running.";
+
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            credentials: "same-origin",
+          });
+          window.location.assign(response.url || "/series");
+        } catch (_error) {
+          window.location.assign("/series?error=Rescan+failed:+network+error");
+        }
+      });
+    });
+  })();
+</script>
