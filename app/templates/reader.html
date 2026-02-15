@@ -30,6 +30,7 @@
           <strong>{{ year.title }}</strong>
           <div class="muted">
             • Keyboard: <span class="kbd">←</span> <span class="kbd">→</span> <span class="kbd">Space</span>
+            <span class="kbd">+</span> <span class="kbd">-</span>
             • Tip: click left/right sides to navigate
           </div>
         </div>
@@ -119,7 +120,7 @@
       }
 
       function setZoom(z) {
-        const clamped = Math.max(0.5, Math.min(3, z));
+        const clamped = Math.max(0.1, Math.min(3, z));
         localStorage.setItem(zoomKey, clamped.toString());
         updateFitLabel('zoom');
         applySizing();
@@ -184,11 +185,25 @@
       // Keyboard nav: left/right + space for next
       document.addEventListener("keydown", (e) => {
         if (!keyboardEnabled) return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
         const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
         if (tag === "input" || tag === "textarea") return;
 
         const prevUrl = "{{ prev_url or '' }}";
         const nextUrl = "{{ next_url or '' }}";
+
+        const zoomInKey = e.key === "+" || e.key === "=" || e.code === "NumpadAdd";
+        const zoomOutKey = e.key === "-" || e.key === "_" || e.code === "NumpadSubtract";
+        if (zoomInKey) {
+          e.preventDefault();
+          zoomBy(0.1);
+          return;
+        }
+        if (zoomOutKey) {
+          e.preventDefault();
+          zoomBy(-0.1);
+          return;
+        }
 
         if (e.key === "ArrowLeft" && prevUrl) window.location.href = prevUrl;
         if (e.key === "ArrowRight" && nextUrl) window.location.href = nextUrl;
