@@ -20,6 +20,9 @@
     const overlay = document.getElementById("scanOverlay");
     const status = document.getElementById("scanOverlayStatus");
     let scanning = false;
+    let startedAt = 0;
+    let timerId = 0;
+    let pollId = 0;
 
     function beforeUnload(event) {
       if (!scanning) return;
@@ -32,8 +35,39 @@
       if (overlay) overlay.hidden = !active;
       document.body.classList.toggle("scan-busy", active);
       if (active) {
+        startedAt = Date.now();
+        timerId = window.setInterval(() => {
+          if (!status || !scanning) return;
+          const seconds = Math.max(1, Math.floor((Date.now() - startedAt) / 1000));
+          status.textContent = "Scanning library... " + seconds + "s elapsed. Please keep this tab open.";
+        }, 1000);
+        pollId = window.setInterval(async () => {
+          if (!status || !scanning) return;
+          try {
+            const response = await fetch("/scan-status", {
+              method: "GET",
+              credentials: "same-origin",
+              cache: "no-store",
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data && data.in_progress === false) {
+              if (data.last_error) {
+                status.textContent = "Scan failed. Redirecting to details...";
+              } else {
+                status.textContent = "Scan completed. Redirecting...";
+              }
+            }
+          } catch (_error) {
+            // Keep the timer text if status endpoint is briefly unavailable.
+          }
+        }, 2500);
         window.addEventListener("beforeunload", beforeUnload);
       } else {
+        window.clearInterval(timerId);
+        window.clearInterval(pollId);
+        timerId = 0;
+        pollId = 0;
         window.removeEventListener("beforeunload", beforeUnload);
       }
       forms.forEach((form) => {
@@ -47,7 +81,7 @@
         event.preventDefault();
         if (scanning) return;
         setScanning(true);
-        if (status) status.textContent = "Please keep this tab open while rescan is running.";
+        if (status) status.textContent = "Starting scan...";
 
         try {
           const response = await fetch(form.action, {

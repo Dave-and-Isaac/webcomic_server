@@ -124,19 +124,33 @@ def _render(request: Request, template_name: str, context: dict):
 def _scan_and_record(comics_dir: Path) -> tuple[bool, str | None]:
     start = time.perf_counter()
     set_setting("scan_last_started", str(time.time()))
+    set_setting("scan_in_progress", "1")
     try:
         scan_comics(comics_dir)
     except Exception as exc:
         duration_ms = int((time.perf_counter() - start) * 1000)
         set_setting("scan_duration_ms", str(duration_ms))
         set_setting("scan_last_error", str(exc))
+        set_setting("scan_in_progress", "0")
         logger.exception("Scan failed for comics_dir=%s", comics_dir)
         return (False, str(exc))
     duration_ms = int((time.perf_counter() - start) * 1000)
     set_setting("scan_last_completed", str(time.time()))
     set_setting("scan_duration_ms", str(duration_ms))
     delete_setting("scan_last_error")
+    set_setting("scan_in_progress", "0")
     return (True, None)
+
+
+@app.get("/scan-status")
+def scan_status():
+    return {
+        "in_progress": get_setting("scan_in_progress") == "1",
+        "last_started": get_setting("scan_last_started"),
+        "last_completed": get_setting("scan_last_completed"),
+        "last_error": get_setting("scan_last_error"),
+        "duration_ms": get_setting("scan_duration_ms"),
+    }
 
 
 def _series_meta(series_cfg: dict, comic_slug: str) -> dict:
