@@ -856,6 +856,10 @@ body {
   padding: 20px;
 }
 
+.scan-overlay[hidden] {
+  display: none !important;
+}
+
 .scan-dialog {
   width: min(520px, 94vw);
   background: var(--panel);
