@@ -917,9 +917,9 @@ body.scan-busy {
 }
 
 .pill.adult {
-  border-color: rgba(255, 122, 122, .55);
-  color: #ffb2b2;
-  background: rgba(255, 110, 110, .12);
+  border-color: #c62828;
+  color: #ffe5e5;
+  background: #b71c1c;
 }
 
 .list {
