@@ -32,8 +32,15 @@
           {% else %}
             <h2>{{ meta.title or comic.title }}</h2>
           {% endif %}
-          {% if meta.year_range %}
-            <div class="muted">{{ meta.year_range }}</div>
+          {% if meta.adult or meta.year_range %}
+            <div class="row" style="gap:8px; margin-top: 4px;">
+              {% if meta.adult %}
+                <span class="pill adult">Adult</span>
+              {% endif %}
+              {% if meta.year_range %}
+                <div class="muted">{{ meta.year_range }}</div>
+              {% endif %}
+            </div>
           {% endif %}
           {% if meta.summary %}
             <div class="series-summary">{{ meta.summary }}</div>

@@ -916,6 +916,12 @@ body.scan-busy {
   color: #ffd67a;
 }
 
+.pill.adult {
+  border-color: rgba(255, 122, 122, .55);
+  color: #ffb2b2;
+  background: rgba(255, 110, 110, .12);
+}
+
 .list {
   display: grid;
   gap: 8px;

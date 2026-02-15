@@ -363,6 +363,7 @@ def library(request: Request, error: str | None = None, success: str | None = No
                 "last_read": lr,
                 "poster_url": poster_url,
                 "display_title": display_title,
+                "is_adult": bool(meta.get("adult", False)),
                 "year_count": year_count,
                 "total_images": total_images,
                 "progress_pct": progress_pct,
