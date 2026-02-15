@@ -1,12 +1,12 @@
 name: Publish Docker image
-run-name: Publish Docker image ${{ github.event.inputs.version }}
+run-name: Docker Publish
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag to publish"
-        required: true
+        description: "Version tag to publish (defaults to VERSION file)"
+        required: false
         type: string
       publish_latest:
         description: "Also publish the :latest tag"
@@ -39,7 +39,11 @@ jobs:
       - name: Read version
         id: version
         run: |
-          echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Normalize owner
         id: owner
